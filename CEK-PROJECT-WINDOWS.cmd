@@ -6,6 +6,6 @@ echo ========================================
 echo Folder aktif: %CD%
 echo.
 echo Jika benar, tampil juarametacorp-website@2.0.0 dan cms:setup:
-call npm runnn
+call npm run
 echo.
 pause
