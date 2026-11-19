@@ -1,0 +1,6 @@
+{
+  "name": "JuaraMetaCorp — Spatial Computing & Next-Gen Interactive Experience",
+  "description": "JuaraMetaCorp engineers next-gen spatial 3D environments, enterprise WebGL interfaces, and high-performance immersive software.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,13 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Runtime CMS database and uploads (back up before deployment)
+data/cms.json
+data/uploads/*
+!data/uploads/.gitkeep

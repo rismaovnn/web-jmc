@@ -1,0 +1,217 @@
+:root{color-scheme:dark;--jmc-navy:#030b26;--jmc-deep:#061331;--jmc-cyan:#5de3ff;--jmc-blue:#2b78ff;--jmc-line:rgba(126,184,255,.18);--jmc-ink:#f5f9ff;--jmc-muted:#a3b9db}
+html{background:var(--jmc-navy);scroll-behavior:smooth}
+body{background:var(--jmc-navy);color:var(--jmc-ink)}
+.jmc-site{min-height:100vh;background:radial-gradient(ellipse 80% 15% at 75% 21%,rgba(32,91,201,.12),transparent 78%),linear-gradient(180deg,#030b26,#05102a 55%,#030b26);color:var(--jmc-ink)}
+.jmc-section{position:relative;isolation:isolate;padding:105px 0;overflow:hidden}
+.jmc-section::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse 40% 65% at 95% 30%,rgba(28,103,220,.13),transparent 80%)}
+.jmc-section-alt{background:linear-gradient(115deg,rgba(7,25,63,.84),rgba(3,12,34,.8))}
+/* Blue-white-blue rhythm. A light section changes ONLY the section canvas and its
+   free-standing heading text; every .jmc-card retains the original navy gradient. */
+.jmc-section-light{background:#fff;color:#081938;border-top-color:#dfe7f2}
+.jmc-section-light::before{background:radial-gradient(ellipse 65% 85% at 100% 8%,rgba(51,122,232,.045),transparent 80%)}
+.jmc-section-light .jmc-title{color:#071b3d}
+.jmc-section-light .jmc-title-gradient{background:linear-gradient(95deg,#087fca 0%,#2865c8 53%,#6653cb 100%);background-clip:text;-webkit-background-clip:text;color:transparent}
+.jmc-section-light .jmc-description{color:#50617a}
+.jmc-section-light .jmc-eyebrow{color:#1355a2;border-color:rgba(20,99,197,.22);background:rgba(28,106,201,.055)}
+.jmc-section-light .jmc-eyebrow:before{background:#1689d8;box-shadow:0 0 9px rgba(26,149,244,.45)}
+.jmc-section-light .jmc-section-link{color:#145cb6}
+.jmc-section-light .jmc-section-link:hover{color:#063b83}
+/* Explicitly protect content placed inside dark glass cards on white sections. */
+.jmc-section-light .jmc-card{color:#f5f9ff}
+.jmc-section-light .jmc-card .jmc-description{color:#a7badb}
+.jmc-section-light .jmc-card .jmc-eyebrow{color:#8aebff;border-color:rgba(85,218,255,.28);background:rgba(72,167,255,.07)}
+.jmc-section-light .jmc-card .jmc-title-gradient{background:linear-gradient(95deg,#80e9ff,#62a3ff 52%,#c5adff);background-clip:text;-webkit-background-clip:text;color:transparent}
+.jmc-wrap{max-width:1200px;margin:0 auto;padding:0 26px}
+.jmc-eyebrow{display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(85,218,255,.28);border-radius:999px;padding:8px 14px;background:rgba(72,167,255,.07);font:700 10px/1.25 'JetBrains Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:#8aebff}
+.jmc-eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#59e5ff;box-shadow:0 0 12px #59e5ff}
+.jmc-title{margin:19px 0 0;color:#f6f9ff;font-size:clamp(34px,4.15vw,58px);line-height:1.08;letter-spacing:-.045em;font-weight:800}
+.jmc-title-gradient{background:linear-gradient(95deg,#80e9ff,#62a3ff 52%,#c5adff);color:transparent;background-clip:text;-webkit-background-clip:text}
+.jmc-description{color:#a7badb;line-height:1.8;font-size:15px;max-width:660px}
+.jmc-card{position:relative;isolation:isolate;overflow:hidden;border:1px solid rgba(114,184,255,.22);border-radius:26px;background:radial-gradient(ellipse 75% 60% at 10% 0%,rgba(41,111,231,.22),transparent 85%),linear-gradient(147deg,rgba(11,34,85,.85),rgba(4,15,42,.92) 70%,rgba(3,10,30,.98));box-shadow:0 16px 38px rgba(0,2,18,.36),inset 0 1px 0 rgba(194,231,255,.07);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.jmc-card::before{content:"";pointer-events:none;position:absolute;inset:0;border-radius:inherit;background:radial-gradient(ellipse 55% 45% at 100% 0%,rgba(33,168,255,.09),transparent 70%);z-index:-1}
+.jmc-hover{transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease,background .3s ease}
+.jmc-hover:hover{transform:translateY(-8px);border-color:rgba(88,218,255,.65);box-shadow:0 26px 65px rgba(0,6,27,.48),0 0 38px rgba(40,134,255,.25),inset 0 1px 0 rgba(194,231,255,.15)}
+.jmc-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(92,181,255,.24);border-radius:7px;padding:5px 9px;background:rgba(36,113,240,.13);color:#91d7ff;font:600 10px/1.2 'JetBrains Mono',monospace;letter-spacing:.05em}
+.jmc-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:13px 22px;background:linear-gradient(105deg,#2366f0,#0eb7e8);color:#fff;font-size:13px;font-weight:750;box-shadow:0 9px 28px rgba(27,118,245,.25);transition:transform .3s ease,box-shadow .3s ease;text-decoration:none}
+.jmc-button:hover{transform:translateY(-2px);box-shadow:0 12px 35px rgba(32,179,245,.4)}
+.jmc-button-secondary{background:rgba(12,40,83,.45);border:1px solid rgba(135,197,255,.28);box-shadow:none}
+.jmc-button-secondary:hover{box-shadow:0 0 25px rgba(41,125,242,.25);border-color:rgba(92,221,255,.7)}
+.jmc-top-border{border-top:1px solid rgba(118,194,255,.13)}
+.jmc-grid-texture{background-image:linear-gradient(rgba(103,184,255,.048) 1px,transparent 1px),linear-gradient(90deg,rgba(103,184,255,.048) 1px,transparent 1px);background-size:54px 54px}
+.jmc-avatar{width:90px;height:90px;border-radius:50%;padding:4px;background:linear-gradient(125deg,#54e3ff,#2e79fa,#5d56ca);box-shadow:0 0 0 5px rgba(23,105,218,.11),0 0 25px rgba(35,161,245,.19);flex:none}
+.jmc-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%;background:#f0f5fa}
+.jmc-org-lines{height:40px;max-width:73%;margin:0 auto;border-left:1px solid #58bcf2;position:relative;left:0}
+.jmc-org-lines::after{content:"";position:absolute;top:39px;height:1px;background:linear-gradient(90deg,transparent,#52bced 8%,#52bced 92%,transparent);left:-50%;width:100%}
+.jmc-org-branch{height:36px;margin:0 auto;width:66.7%;border-top:1px solid rgba(95,203,255,.55);border-left:1px solid rgba(95,203,255,.55);border-right:1px solid rgba(95,203,255,.55);position:relative}
+.jmc-org-stem{height:43px;width:1px;background:linear-gradient(#66e5ff,#527cff);margin:0 auto;box-shadow:0 0 9px rgba(79,195,255,.55)}
+.jmc-form-field{width:100%;outline:0;border:1px solid rgba(112,190,255,.25);background:rgba(5,20,53,.8);border-radius:15px;padding:14px 16px;color:#fff;transition:border-color .25s,box-shadow .25s}
+.jmc-form-field:focus{border-color:#54d6ff;box-shadow:0 0 0 3px rgba(46,157,233,.18)}
+.jmc-form-field::placeholder{color:#607ca6}
+::selection{background:rgba(45,162,255,.45);color:#fff}
+@media(max-width:767px){.jmc-section{padding:72px 0}.jmc-wrap{padding:0 20px}.jmc-avatar{width:80px;height:80px}.jmc-org-lines,.jmc-org-branch{display:none}.jmc-org-stem{height:30px}}
+@media(prefers-reduced-motion:reduce){.jmc-hover,.jmc-button{transition:none!important}.jmc-hover:hover,.jmc-button:hover{transform:none}}
+
+/* Inverse cards: every dark section uses soft white/light glass cards instead of navy. */
+.jmc-card-white{background:radial-gradient(ellipse 90% 75% at 10% -5%,rgba(182,222,255,.62),transparent 80%),linear-gradient(138deg,rgba(255,255,255,.99),rgba(238,247,255,.98));color:#10264a;border:1px solid rgba(138,197,248,.60);box-shadow:0 16px 42px rgba(0,8,40,.18),inset 0 1px 0 white;backdrop-filter:blur(16px)}
+.jmc-card-white::before{background:radial-gradient(ellipse 70% 65% at 105% -10%,rgba(112,191,255,.13),transparent 77%)}
+.jmc-card-white.jmc-hover:hover{border-color:rgba(24,127,232,.68);box-shadow:0 25px 55px rgba(2,29,88,.25),0 0 30px rgba(74,161,247,.18),inset 0 1px 0 #fff}
+.jmc-card-white .jmc-badge{background:rgba(35,107,213,.08);color:#1d5598;border-color:rgba(51,126,221,.24)}
+.jmc-card-white .jmc-card-subtext{color:#4f6482}
+.jmc-button-outline-dark{border:1px solid rgba(19,96,192,.28);color:#134a8b;background:rgba(226,240,255,.85);box-shadow:none}
+.jmc-button-outline-dark:hover{color:#08346c;box-shadow:0 0 25px rgba(51,140,249,.16)}
+.partner-logo-plate{width:100%;max-width:176px;height:112px;padding:14px 12px;border-radius:19px;background:rgba(255,255,255,.98);box-shadow:inset 0 0 0 1px rgba(196,223,255,.75),0 6px 24px rgba(3,13,36,.18);display:flex;justify-content:center;align-items:center;overflow:hidden}
+.partner-logo-plate img{object-fit:contain;max-width:100%;max-height:100%;width:auto;height:auto}
+.partner-logo-fallback{display:none;color:#134a83;font-size:14px;font-weight:800;text-align:center;line-height:1.3}
+.jmc-social-link{display:inline-flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid rgba(76,174,255,.25);border-radius:13px;background:rgba(38,92,185,.13);color:#9fddff;font-size:12px;font-weight:650;transition:border-color .25s,background .25s}
+a.jmc-social-link:hover{background:rgba(38,92,185,.26);border-color:rgba(76,174,255,.6)}
+.jmc-footer-wordmark{position:relative;isolation:isolate;margin-top:45px;margin-bottom:20px;text-align:center;white-space:nowrap;line-height:1;letter-spacing:-.065em;font-size:clamp(45px,11.9vw,166px);font-weight:900;color:rgba(127,188,255,.08);text-shadow:0 0 55px rgba(58,151,255,.14);user-select:none;pointer-events:none}
+.jmc-footer-wordmark::after{content:'';position:absolute;bottom:3%;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(75,176,252,.34),transparent)}
+@media(max-width:640px){.jmc-footer-wordmark{font-size:11.3vw;margin-top:38px}}
+
+/* Contact submission: accessible notice states and discreet anti-spam honeypot. */
+.jmc-inquiry-notice{display:flex;align-items:flex-start;gap:11px;padding:14px 16px;border-radius:14px;font-size:13px;line-height:1.6}
+.jmc-inquiry-success{background:rgba(16,185,129,.12);border:1px solid rgba(52,211,153,.38);color:#a9fbd7}
+.jmc-inquiry-error{background:rgba(245,158,11,.10);border:1px solid rgba(251,191,36,.42);color:#ffe4b0}
+.jmc-honeypot{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+
+/* Continuous premium partner marquee; navy pills on the white partner section. */
+.jmc-partner-trust-label{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.6;padding:9px 20px;border:1px solid rgba(189,147,40,.6);border-radius:999px;color:#91651c;background:linear-gradient(110deg,rgba(255,217,100,.12),rgba(249,238,204,.06));font:700 10px/1.6 'JetBrains Mono',monospace;letter-spacing:.15em;max-width:100%}
+.jmc-partner-marquee{position:relative;margin-top:29px;overflow:hidden;isolation:isolate}
+.jmc-partner-marquee-viewport{width:100%;overflow:hidden;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none;padding:18px 0 22px}
+.jmc-partner-marquee-viewport.is-dragging{cursor:grabbing}
+.jmc-partner-marquee-track{display:flex;align-items:stretch;width:max-content;animation:jmc-partners-scroll 36s linear infinite;will-change:transform;transform:translate3d(0,0,0)}
+.jmc-partner-marquee-viewport:hover .jmc-partner-marquee-track,.jmc-partner-marquee-viewport:focus-within .jmc-partner-marquee-track{animation-play-state:paused}
+.jmc-partner-marquee-group{display:flex;align-items:stretch;flex:none;gap:16px;padding-right:16px}
+.jmc-partner-badge{display:inline-flex;align-items:center;gap:13px;flex:none;min-width:290px;max-width:330px;padding:15px 19px 15px 14px;min-height:90px;text-decoration:none;cursor:pointer;border:1px solid rgba(100,182,255,.28);border-radius:18px;background:radial-gradient(ellipse at 0 0,rgba(46,122,240,.42),transparent 85%),linear-gradient(125deg,#0c2b68,#041737 87%);box-shadow:0 12px 30px rgba(4,58,144,.14),inset 0 1px 0 rgba(189,229,255,.1);color:#fff;transition:box-shadow .3s,border-color .3s}
+.jmc-partner-badge:hover,.jmc-partner-badge:focus-visible{border-color:rgba(78,198,255,.72);box-shadow:0 12px 40px rgba(17,112,228,.3),0 0 19px rgba(31,133,255,.15);outline-offset:3px}
+.jmc-partner-gold-icon{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:10px;background:#ffd128;color:#061b3c;box-shadow:0 0 13px rgba(255,211,64,.18)}
+.jmc-partner-logo-box{display:grid;place-items:center;overflow:hidden;flex:none;width:58px;height:58px;padding:5px;background:#fff;border:1px solid rgba(218,232,251,.85);border-radius:13px}
+.jmc-partner-logo-box img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;pointer-events:none}
+.jmc-partner-name{min-width:0;flex:1;font-size:13px;line-height:1.45;font-weight:760;letter-spacing:-.02em;color:#fff}
+.jmc-partner-arrow{color:#72d3ff;flex:none;opacity:.67}
+.jmc-partner-marquee-fade{position:absolute;top:0;bottom:0;width:clamp(24px,7vw,95px);pointer-events:none;z-index:2}
+.jmc-partner-marquee-fade-left{left:0;background:linear-gradient(90deg,#fff,rgba(255,255,255,0))}
+.jmc-partner-marquee-fade-right{right:0;background:linear-gradient(270deg,#fff,rgba(255,255,255,0))}
+@keyframes jmc-partners-scroll{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+@media(max-width:640px){.jmc-partner-badge{min-width:270px;max-width:290px}.jmc-partner-marquee-group{gap:12px;padding-right:12px}.jmc-partner-trust-label{font-size:9px;letter-spacing:.09em}}
+@media(prefers-reduced-motion:reduce){.jmc-partner-marquee-track{animation:none!important;transform:translate3d(0,0,0)}.jmc-partner-marquee-viewport{overflow-x:auto;scrollbar-width:thin}}
+
+.jmc-partner-logo-box{position:relative}
+.jmc-partner-logo-box img{position:absolute;inset:5px;width:calc(100% - 10px);height:calc(100% - 10px);background:#fff}
+.jmc-partner-logo-initials{color:#164981;font-size:11px;line-height:1.1;font-weight:850;text-align:center;letter-spacing:.02em}
+
+/* ==========================================================
+   MOTION SYSTEM — premium, restrained, accessible (v1.2)
+   Transform/opacity first; no per-frame React state updates.
+   ========================================================== */
+.jmc-scroll-progress{
+  position:fixed;inset:0 0 auto;z-index:90;height:3px;
+  transform-origin:left center;pointer-events:none;
+  background:linear-gradient(90deg,#2563eb 0%,#49d8fb 55%,#9d91ff 100%);
+  box-shadow:0 0 16px rgba(56,189,248,.52);
+}
+.jmc-page-loading{height:46vh;background:linear-gradient(180deg,#030b26,#061533)}
+
+/* Safe scroll reveals: content MUST remain visible even if the observer never fires.
+   The old .jmc-motion-pending opacity:0 rule could leave entire sections blank.
+   Only animate after the IntersectionObserver marks an element as visible. */
+.jmc-motion-pending{opacity:1;visibility:visible}
+@keyframes jmc-safe-reveal{
+  from{opacity:.35;transform:translate3d(0,20px,0)}
+  to{opacity:1;transform:translate3d(0,0,0)}
+}
+.jmc-motion-pending.jmc-motion-in{
+  animation:jmc-safe-reveal .74s cubic-bezier(.22,1,.36,1) var(--jmc-motion-delay,0ms) both;
+}
+
+/* Pointer-following light in card glass. Light cards get restrained sapphire. */
+.jmc-card.jmc-spotlight::before{
+  background:radial-gradient(310px circle at var(--jmc-pointer-x,50%) var(--jmc-pointer-y,10%),rgba(70,194,255,.2),transparent 72%);
+  opacity:0;transition:opacity .36s ease;
+}
+.jmc-card.jmc-card-white.jmc-spotlight::before{
+  background:radial-gradient(330px circle at var(--jmc-pointer-x,50%) var(--jmc-pointer-y,10%),rgba(45,142,232,.16),transparent 73%);
+}
+.jmc-card.jmc-spotlight:hover::before,.jmc-card.jmc-spotlight:focus-within::before{opacity:1}
+@media(hover:hover) and (pointer:fine){
+  #projects .jmc-card.jmc-tilt.jmc-hover:hover{
+    transform:perspective(1200px) translateY(-7px) rotateX(var(--jmc-tilt-x,0deg)) rotateY(var(--jmc-tilt-y,0deg));
+  }
+}
+
+/* Tiny animated sheen travels across showcase images only on interaction. */
+.jmc-project-visual::after{
+  content:'';position:absolute;inset:-25%;z-index:2;pointer-events:none;
+  background:linear-gradient(105deg,transparent 40%,rgba(192,235,255,.18) 50%,transparent 60%);
+  transform:translate3d(-110%,0,0) skewX(-12deg);
+  transition:transform 1.05s cubic-bezier(.22,1,.36,1);
+}
+#projects .jmc-card:hover .jmc-project-visual::after{transform:translate3d(115%,0,0) skewX(-12deg)}
+
+/* Gently breathing auroras: low frequency and transform-only. */
+@keyframes jmc-aurora-breathe{
+  0%,100%{transform:translate3d(0,0,0) scale(1)}
+  50%{transform:translate3d(26px,-21px,0) scale(1.12)}
+}
+@keyframes jmc-aurora-drift{
+  0%,100%{transform:translate3d(0,0,0) scale(1)}
+  50%{transform:translate3d(-22px,21px,0) scale(1.08)}
+}
+.jmc-aurora-a{animation:jmc-aurora-breathe 16s ease-in-out infinite}
+.jmc-aurora-b{animation:jmc-aurora-drift 19s ease-in-out infinite reverse}
+.jmc-aurora-c{animation:jmc-aurora-drift 22s ease-in-out infinite}
+.jmc-page-hero-glow{animation:jmc-aurora-breathe 16s ease-in-out infinite}
+
+/* Gradient type shimmer is deliberately low contrast. */
+.jmc-title-gradient{background-size:190% 100%;animation:jmc-gradient-shift 9s ease-in-out infinite alternate}
+@keyframes jmc-gradient-shift{from{background-position:0 50%}to{background-position:100% 50%}}
+
+@keyframes jmc-scroll-bob{
+  0%,100%{translate:0 0}
+  50%{translate:0 5px}
+}
+.jmc-scroll-cue svg{animation:jmc-scroll-bob 2.3s ease-in-out infinite}
+
+/* Sticky, premium navbar: appears elegantly and tightens after the first scroll. */
+.jmc-navbar>div:first-child{
+  transition:height .35s cubic-bezier(.22,1,.36,1),
+   background .35s ease,border-color .35s ease,box-shadow .35s ease;
+}
+.jmc-nav-scrolled>div:first-child{
+  height:62px;background:rgba(4,16,47,.94);
+  border-color:rgba(102,200,255,.37);
+  box-shadow:0 14px 45px rgba(0,9,38,.54),0 0 22px rgba(38,127,255,.12),inset 0 1px 0 rgba(202,237,255,.12);
+}
+
+/* Buttons feel more responsive and directional without persistent animation. */
+.jmc-button{position:relative;isolation:isolate;overflow:hidden;transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s ease}
+.jmc-button::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(112deg,transparent 32%,rgba(255,255,255,.3) 49%,transparent 66%);
+  transform:translate3d(-140%,0,0);
+  transition:transform .82s cubic-bezier(.22,1,.36,1)
+}
+.jmc-button:hover::after{transform:translate3d(140%,0,0)}
+.jmc-button:active{transform:translateY(0) scale(.985)}
+.jmc-button:focus-visible,.jmc-partner-badge:focus-visible{outline:2px solid #5de3ff;outline-offset:4px}
+
+/* The brand wordmark breathes quietly at the end of the page. */
+@keyframes jmc-footer-breathe{
+  0%,100%{opacity:.78;text-shadow:0 0 40px rgba(58,151,255,.1)}
+  50%{opacity:1;text-shadow:0 0 70px rgba(58,151,255,.21)}
+}
+.jmc-footer-wordmark{animation:jmc-footer-breathe 10s ease-in-out infinite}
+
+/* Honor the user's system preference, including the existing partner marquee. */
+@media(prefers-reduced-motion:reduce){
+  .jmc-motion-pending,.jmc-motion-pending.jmc-motion-in{opacity:1!important;visibility:visible!important;transform:none!important;filter:none!important;transition:none!important;animation:none!important}
+  .jmc-aurora,.jmc-page-hero-glow,.jmc-title-gradient,.jmc-scroll-cue svg,.jmc-footer-wordmark{
+    animation:none!important;translate:none!important
+  }
+  .jmc-button::after,.jmc-project-visual::after{display:none!important}
+  .jmc-nav-scrolled>div:first-child{transition:none!important}
+  #projects .jmc-card.jmc-tilt.jmc-hover:hover{transform:none!important}
+}
+
+/* Sanitized rich text authored in the CMS */
+.jmc-cms-rich p+p{margin-top:.65em}.jmc-cms-rich ul{list-style:disc;margin:.6em 0;padding-left:1.4em}.jmc-cms-rich ol{list-style:decimal;margin:.6em 0;padding-left:1.4em}.jmc-cms-rich li+li{margin-top:.35em}.jmc-cms-rich a{color:#49a8ed;text-decoration:underline}.jmc-cms-rich blockquote{border-left:2px solid #54b4f7;padding-left:14px;margin:10px 0}.jmc-cms-rich h3,.jmc-cms-rich h4{font-weight:750;margin:.4em 0}

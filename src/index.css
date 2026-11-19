@@ -1,0 +1,109 @@
+@import "tailwindcss";
+@import "./site.css";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-royal-950: #01176b;
+  --color-royal-900: #031c7a;
+  --color-royal-800: #06278e;
+  --color-royal-700: #0b37a5;
+  --color-royal-600: #134ebd;
+  --color-royal-500: #2281d8;
+  --color-gold-400: #fde047;
+  --color-gold-500: #facc15;
+  --color-gold-600: #eab308;
+  --color-violet-accent: #a855f7;
+  --color-emerald-accent: #22c55e;
+
+  /* Hero / navbar palette — clean blue-on-white */
+  --color-primary: #2563eb;
+  --color-secondary: #38bdf8;
+  --color-surface: #f8fafc;
+}
+
+/* Glass panel elements for white page */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+.glass-panel-violet {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid #a855f7;
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.15);
+}
+
+/* Card 3D tilt smoothness (hover only) */
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #081736;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e3a8a;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #facc15;
+}
+
+/* ------------------------------------------------------------------ performance rules
+   Motion is mostly interaction/scroll-driven. Only subtle ambient aurora, wordmark glow,
+   and the partner marquee loop; reduced-motion users see static equivalents. */
+
+/* section anchors land below the floating sticky navbar */
+[id] {
+  scroll-margin-top: 92px;
+}
+
+/* hero: static perspective neon grid floor */
+.hero-grid-wrap {
+  perspective: 700px;
+  mask-image: linear-gradient(to top, transparent 0%, black 35%, black 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 35%, black 60%, transparent 100%);
+}
+.hero-grid {
+  position: absolute;
+  inset: -40% 0 0 0;
+  transform: rotateX(68deg);
+  transform-origin: center top;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.28) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* hero: light sheen that sweeps across the primary button once, on hover */
+.hero-btn-sheen {
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .hero-btn-sheen {
+  transform: translateX(120%);
+}
+
+/* ecosystem cards: lift + glow on hover (see HeroEcosystem) */
+
+/* respect the OS "reduce motion" setting for every CSS transition on the page */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
