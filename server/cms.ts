@@ -8,6 +8,7 @@ import sharp from 'sharp';
 import sanitizeHtml from 'sanitize-html';
 import { defaultContent } from '../src/cms/defaultContent';
 import type { CMSContent, SectionKey } from '../src/cms/schema';
+import { useSupabase, getSections, putSection, getSession, putSession, deleteSession, uploadCmsImage } from './supabase';
 
 export const dataDir = path.resolve(process.env.CMS_DATA_DIR || path.join(process.cwd(), 'data'));
 const imageDir = path.join(dataDir, 'uploads');
@@ -74,6 +75,13 @@ async function migrateLegacyManifests(content:CMSContent){
 }
 let cache:CMSContent|null=null;
 export async function readContent():Promise<CMSContent> {
+ if(useSupabase) {
+  // No process cache: every Vercel instance reads the same permanent database.
+  const rows=await getSections();
+  const content=structuredClone(defaultContent);
+  for(const row of rows) if(sections.includes(row.section)) (content as any)[row.section]=normalize(row.section,row.value);
+  return content;
+ }
  if(cache)return cache;
  await fs.mkdir(dataDir,{recursive:true});
  try {
@@ -95,6 +103,11 @@ async function atomicWrite(value:CMSContent){
 }
 let writeQueue=Promise.resolve();
 function updateSection(key:SectionKey,payload:unknown){
+ if(useSupabase) {
+  const value=normalize(key,payload);
+  // Sections live in separate rows: concurrent edits to distinct sections do not overwrite each other.
+  return putSection(key,value).then(()=>value);
+ }
  const operation=writeQueue.then(async()=>{
   const current=await readContent();
   const updated={...current,[key]:normalize(key,payload)} as CMSContent;
@@ -105,10 +118,27 @@ function updateSection(key:SectionKey,payload:unknown){
  return operation;
 }
 function parseCookies(req:Request){return Object.fromEntries((req.headers.cookie||'').split(';').map(part=>{const i=part.indexOf('=');return i<0?['','']:[part.slice(0,i).trim(),part.slice(i+1).trim()]}));}
-function currentSession(req:Request){const raw=parseCookies(req).jmc_cms_sid; if(!raw)return null; const session=sessions.get(raw); if(!session)return null; if(session.expires<Date.now()){sessions.delete(raw);return null}return session;}
-function requireSession(req:Request,res:Response,next:NextFunction){const sess=currentSession(req);if(!sess){res.status(401).json({message:'Please sign in.'});return;}res.locals.session=sess;next();}
+async function currentSession(req:Request){
+ const raw=parseCookies(req).jmc_cms_sid;
+ if(!raw || !/^[a-f0-9]{64}$/.test(raw))return null;
+ if(useSupabase){
+  const row=await getSession(crypto.createHash('sha256').update(raw).digest('hex'));
+  return row && Date.parse(row.expires_at)>Date.now()?{csrf:row.csrf,expires:Date.parse(row.expires_at)}:null;
+ }
+ const session=sessions.get(raw);
+ if(!session)return null;
+ if(session.expires<Date.now()){sessions.delete(raw);return null}
+ return session;
+}
+async function requireSession(req:Request,res:Response,next:NextFunction){
+ try {
+  const sess=await currentSession(req);
+  if(!sess){res.status(401).json({message:'Please sign in.'});return;}
+  res.locals.session=sess;next();
+ }catch(err){next(err)}
+}
 function sameOrigin(req:Request,res:Response,next:NextFunction){
- const origin=req.get('origin');const expected=process.env.PUBLIC_ORIGIN?.replace(/\/$/,'')||`${req.protocol}://${req.get('host')}`;
+ const origin=req.get('origin');const expected=process.env.PUBLIC_ORIGIN?.replace(/\/$/,'')||`${process.env.VERCEL==='1'?'https':req.protocol}://${req.get('host')}`;
  if((origin && origin!==expected)||req.get('sec-fetch-site')==='cross-site'){res.status(403).json({message:'Cross-site requests are blocked.'});return;}next();
 }
 function csrf(req:Request,res:Response,next:NextFunction){
@@ -126,34 +156,54 @@ function verifyPassword(pass:string){
  const expected=Buffer.from(match[2],'hex');return crypto.timingSafeEqual(actual,expected);
 }
 const noStore=(_req:Request,res:Response,next:NextFunction)=>{res.setHeader('Cache-Control','no-store');next();};
-const secureCookie=process.env.NODE_ENV==='production'?'; Secure':'';
+const secureCookie=(process.env.NODE_ENV==='production'||process.env.VERCEL==='1')?'; Secure':'';
 function cookie(value:string,maxAge:number){return `jmc_cms_sid=${value}; HttpOnly; SameSite=Strict; Path=/api/admin; Max-Age=${maxAge}${secureCookie}`;}
 admin.use(noStore);
-admin.get('/session',(req,res)=>{const sess=currentSession(req);if(!sess){res.status(401).json({authenticated:false});return;}res.json({authenticated:true,csrfToken:sess.csrf});});
-admin.post('/login',sameOrigin,(req,res)=>{
+admin.get('/session',async(req,res,next)=>{try{const sess=await currentSession(req);if(!sess){res.status(401).json({authenticated:false});return;}res.json({authenticated:true,csrfToken:sess.csrf});}catch(err){next(err)}});
+admin.post('/login',sameOrigin,async(req,res,next)=>{
  const key=req.ip||'unknown';const now=Date.now();const entry=loginAttempts.get(key)||{count:0,reset:now+15*60*1000};
  if(now>entry.reset){entry.count=0;entry.reset=now+15*60*1000;}
  if(entry.count>=8){res.status(429).json({message:'Too many login attempts. Try again in 15 minutes.'});return;}
  if(!process.env.CMS_ADMIN_PASSWORD_HASH){res.status(503).json({message:'Admin password not configured. Run npm run cms:setup on the server.'});return;}
  const password=typeof req.body?.password==='string'?req.body.password:'';
  if(password.length>1024||!verifyPassword(password)){entry.count++;loginAttempts.set(key,entry);res.status(401).json({message:'Incorrect password.'});return;}
- loginAttempts.delete(key);const sid=crypto.randomBytes(32).toString('hex');const session={csrf:crypto.randomBytes(32).toString('hex'),expires:now+sessionDuration};sessions.set(sid,session);
- res.setHeader('Set-Cookie',cookie(sid,sessionDuration/1000));res.json({authenticated:true,csrfToken:session.csrf});
+ const sid=crypto.randomBytes(32).toString('hex');const session={csrf:crypto.randomBytes(32).toString('hex'),expires:now+sessionDuration};
+ try {
+  if(useSupabase) await putSession(crypto.createHash('sha256').update(sid).digest('hex'),session.csrf,new Date(session.expires).toISOString());
+  else sessions.set(sid,session);
+  loginAttempts.delete(key);
+  res.setHeader('Set-Cookie',cookie(sid,sessionDuration/1000));res.json({authenticated:true,csrfToken:session.csrf});
+ }catch(err){next(err)}
 });
-admin.post('/logout',sameOrigin,requireSession,csrf,(req,res)=>{const sid=parseCookies(req).jmc_cms_sid;sessions.delete(sid);res.setHeader('Set-Cookie',cookie('',0));res.json({success:true});});
+admin.post('/logout',sameOrigin,requireSession,csrf,async(req,res,next)=>{
+ try {
+  const sid=parseCookies(req).jmc_cms_sid;
+  if(useSupabase) await deleteSession(crypto.createHash('sha256').update(sid).digest('hex'));
+  else sessions.delete(sid);
+  res.setHeader('Set-Cookie',cookie('',0));res.json({success:true});
+ }catch(err){next(err)}
+});
 admin.put('/content/:section',sameOrigin,requireSession,csrf,async(req,res)=>{
  const section=req.params.section as SectionKey;
  if(!sections.includes(section)){res.status(404).json({message:'Unknown section.'});return;}
  if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)){res.status(400).json({message:'Invalid content.'});return;}
- try {const result=await updateSection(section,req.body.value);res.json({saved:true,value:result});}catch(err){console.error('CMS save failed:',(err as Error).message);res.status(500).json({message:'Unable to save data. Check server write permissions.'});}
+ try {const result=await updateSection(section,req.body.value);res.json({saved:true,value:result});}catch(err){console.error('CMS save failed:',(err as Error).message);res.status(503).json({message:'Unable to save CMS data. Check Supabase configuration/table and function logs.'});}
 });
 admin.post('/upload',sameOrigin,requireSession,csrf,express.raw({type:['image/png','image/jpeg','image/webp','image/avif'],limit:'8mb'}),async(req,res)=>{
  const body=req.body;
  if(!Buffer.isBuffer(body)||!body.length){res.status(400).json({message:'Choose a JPG, PNG, WebP, or AVIF image (up to 8 MB).'});return;}
  try {
   const processed=await sharp(body,{limitInputPixels:30_000_000,failOn:'error'}).rotate().resize({width:1920,height:1200,fit:'inside',withoutEnlargement:true}).webp({quality:82,effort:4}).toBuffer();
-  await fs.mkdir(imageDir,{recursive:true});const id=crypto.randomUUID();await fs.writeFile(path.join(imageDir,`${id}.webp`),processed,{flag:'wx',mode:0o644});
-  res.status(201).json({url:`/uploads/${id}.webp`,bytes:processed.length});
+  const id=crypto.randomUUID();
+  if(useSupabase){
+   try {
+    const imageUrl=await uploadCmsImage(`${id}.webp`,processed);
+    res.status(201).json({url:imageUrl,bytes:processed.length});
+   }catch(err){console.error('CMS image storage failed:',(err as Error).message);res.status(503).json({message:'Unable to save image in Supabase Storage.'});}
+  }else{
+   await fs.mkdir(imageDir,{recursive:true});await fs.writeFile(path.join(imageDir,`${id}.webp`),processed,{flag:'wx',mode:0o644});
+   res.status(201).json({url:`/uploads/${id}.webp`,bytes:processed.length});
+  }
  }catch{res.status(415).json({message:'Image could not be processed. Upload a valid image file.'});}
 });
 export const cmsRouter=admin;

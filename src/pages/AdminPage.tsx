@@ -24,13 +24,35 @@ function RichEditor({label,value,onChange}:{label:string;value:string;onChange:(
    <small>Basic formatting supported. Unsafe HTML is removed by the server when saved.</small>
  </div>;
 }
+// Standard Vercel Functions accept 4.5MB requests by default.
+// Compress oversized camera photos in the browser BEFORE sending to /api/admin/upload.
+async function prepareImageForVercel(file: File): Promise<Blob> {
+ const limit = 3.6 * 1024 * 1024; // leave room below Vercel's 4.5 MB request cap
+ if (file.size <= limit) return file;
+ const bitmap = await createImageBitmap(file);
+ try {
+  const scale = Math.min(1, 1920 / bitmap.width, 1200 / bitmap.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw Error('Cannot process image on this browser');
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  for (const quality of [0.86, 0.76, 0.62, 0.48]) {
+   const output = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', quality));
+   if (output && output.type === 'image/webp' && output.size <= limit) return output;
+  }
+  throw Error('Image is still too large. Please resize it and try again.');
+ } finally { bitmap.close(); }
+}
 function Upload({label,value,onChange,csrf}:{label:string;value:string;onChange:(v:string)=>void;csrf:string}){
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  async function upload(file:File){if(!file)return;if(file.size>8*1024*1024){setError('Maximum image size: 8 MB');return;}setBusy(true);setError('');try{
- const response=await api('/upload',{method:'POST',headers:{'Content-Type':file.type,'X-CMS-CSRF':csrf},body:file});
+ const prepared=await prepareImageForVercel(file);
+ const response=await api('/upload',{method:'POST',headers:{'Content-Type':prepared.type,'X-CMS-CSRF':csrf},body:prepared});
  const result=await response.json();if(!response.ok)throw new Error(result.message||'Upload failed');onChange(result.url);
  }catch(err){setError(err instanceof Error?err.message:'Upload failed');}finally{setBusy(false)}}
- return <div className="cms-field cms-upload"><span>{label}</span><div className="cms-upload-layout"><div className="cms-upload-preview">{value?<img src={value} alt="Uploaded image preview" onError={e=>{e.currentTarget.style.opacity='.1'}}/>:<ImagePlus size={27}/>}</div><div className="cms-upload-actions"><label className="cms-btn cms-btn-subtle cms-file-label">{busy?<LoaderCircle size={16} className="cms-spin"/>:<ImagePlus size={16}/>} {busy?'Optimizing…':'Upload image'}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(file);e.target.value=''}}/></label><small>JPG, PNG, WebP, AVIF • Up to 8 MB • Auto-optimized to WebP</small></div></div>
+ return <div className="cms-field cms-upload"><span>{label}</span><div className="cms-upload-layout"><div className="cms-upload-preview">{value?<img src={value} alt="Uploaded image preview" onError={e=>{e.currentTarget.style.opacity='.1'}}/>:<ImagePlus size={27}/>}</div><div className="cms-upload-actions"><label className="cms-btn cms-btn-subtle cms-file-label">{busy?<LoaderCircle size={16} className="cms-spin"/>:<ImagePlus size={16}/>} {busy?'Optimizing…':'Upload image'}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(file);e.target.value=''}}/></label><small>JPG, PNG, WebP, AVIF • Up to 8 MB • Auto-optimized before upload</small></div></div>
  <input value={value||''} onChange={e=>onChange(e.target.value)} placeholder="Or enter an existing image URL /images/..." aria-label={`${label} URL`}/>{error&&<small role="alert" className="cms-error">{error}</small>}</div>;
 }
 function CollectionEditor<T extends {id:string;order:number}>({items,onChange,create,render,section}:{items:T[];onChange:(v:T[])=>void;create:()=>T;render:(item:T,update:(v:T)=>void)=>ReactNode;section:string}){
@@ -77,7 +99,7 @@ export default function AdminPage(){
  if(!csrf)return <div className="cms-app cms-login-shell"><div className="cms-login"><span className="cms-logo">JM</span><p className="cms-overline">JUARAMETACORP / ADMIN</p><h1>Welcome back.</h1><p>Sign in to manage your website content securely.</p><form onSubmit={signIn}><label className="cms-field"><span>Administrator password</span><input autoFocus type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="Enter your password"/></label>{error&&<p className="cms-error" role="alert">{error}</p>}<button className="cms-btn cms-btn-primary cms-login-button" disabled={busy}>{busy?<LoaderCircle className="cms-spin" size={18}/>:<Lock size={18}/>} Sign in</button></form><Link to="/" className="cms-back"><ArrowLeft size={16}/> Back to website</Link></div></div>;
  return <div className="cms-app cms-layout"><aside className={`cms-sidebar ${mobileNav?'cms-sidebar-open':''}`}><div className="cms-logo-line"><span className="cms-logo">JM</span><div><b>JuaraMetaCorp</b><small>Content Studio</small></div></div><div className="cms-side-label">CONTENT MANAGEMENT</div><nav className="cms-nav">{tabs.map(tab=><button type="button" key={tab.key} onClick={()=>{setSection(tab.key);setMobileNav(false)}} className={section===tab.key?'selected':''}><span>{tab.icon}</span> {tab.label}{pending.includes(tab.key)&&<span className="cms-dot"/>}</button>)}</nav><div className="cms-side-bottom"><Link to="/" target="_blank"><ExternalLink size={16}/> View live website</Link><button type="button" onClick={logout}><LogOut size={16}/> Sign out</button></div></aside>
   <div className="cms-main"><header className="cms-header"><button type="button" className="cms-mobile-trigger" onClick={()=>setMobileNav(!mobileNav)}>Sections <ChevronDown size={16}/></button><div><div className="cms-overline">CONTENT DASHBOARD</div><h1>{tabs.find(t=>t.key===section)?.label}</h1></div><div className="cms-header-actions"><span className="cms-save-label"><Check size={15}/>{status}</span><button disabled={!pending.length} type="button" onClick={()=>void saveAll()} className="cms-btn cms-btn-primary"><Save size={16}/> Save now</button></div></header>
-   <main className="cms-content"><div className="cms-intro"><div><h2>Edit {tabs.find(t=>t.key===section)?.label}</h2><p>Changes save automatically after you stop typing. Drag the handle to reorder collections.</p></div><span className="cms-live"><span/> LIVE CONTENT</span></div>{error&&<div className="cms-alert" role="alert">{error}</div>}<div className="cms-panel" key={section}><Editor section={section} content={content} setSection={changeSection} csrf={csrf}/></div><p className="cms-bottom-note"><ShieldCheck size={16}/> Admin changes are stored on the server. Uploaded images are optimized automatically. Keep regular backups of the data folder.</p></main>
+   <main className="cms-content"><div className="cms-intro"><div><h2>Edit {tabs.find(t=>t.key===section)?.label}</h2><p>Changes save automatically after you stop typing. Drag the handle to reorder collections.</p></div><span className="cms-live"><span/> LIVE CONTENT</span></div>{error&&<div className="cms-alert" role="alert">{error}</div>}<div className="cms-panel" key={section}><Editor section={section} content={content} setSection={changeSection} csrf={csrf}/></div><p className="cms-bottom-note"><ShieldCheck size={16}/> On Vercel, content and images are stored permanently in Supabase. Keep regular Supabase backups.</p></main>
   </div>
  </div>;
 }

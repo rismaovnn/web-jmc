@@ -114,3 +114,7 @@ Edit `public/images/projects/project-images.json` with the image filenames store
 ## Live project links
 
 See [PROJECT_LIVE_LINKS_GUIDE.md](PROJECT_LIVE_LINKS_GUIDE.md) to change which Google Drive or Roblox project opens when visitors click **View Project**.
+
+## Deployment ke Vercel + Supabase (CMS persisten)
+
+**PENTING:** Untuk Vercel, ikuti **`VERCEL_SUPABASE_SETUP.md`** terlebih dahulu. Dokumentasi `CMS_SETUP_GUIDE.md` mendeskripsikan mode lokal/hosting persistent disk; Vercel menggunakan Supabase Database dan Storage sebagai penyimpanan permanen. Sebelum upgrade dari versi lama, migrasikan `data/cms.json` dan `data/uploads` memakai `scripts/migrate-local-cms.mjs`.
