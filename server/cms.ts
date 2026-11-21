@@ -6,9 +6,9 @@ import fs from 'node:fs/promises';
 import express from 'express';
 import sharp from 'sharp';
 import sanitizeHtml from 'sanitize-html';
-import { defaultContent } from '../src/cms/defaultContent';
-import type { CMSContent, SectionKey } from '../src/cms/schema';
-import { useSupabase, getSections, putSection, getSession, putSession, deleteSession, uploadCmsImage, publicCmsImageUrl, getLoginFailures, recordLoginFailure, clearLoginFailures } from './supabase';
+import { defaultContent } from '../src/cms/defaultContent.js';
+import type { CMSContent, SectionKey } from '../src/cms/schema.js';
+import { useSupabase, getSections, putSection, getSession, putSession, deleteSession, uploadCmsImage, publicCmsImageUrl, getLoginFailures, recordLoginFailure, clearLoginFailures } from './supabase.js';
 
 export const dataDir = path.resolve(process.env.CMS_DATA_DIR || path.join(process.cwd(), 'data'));
 const imageDir = path.join(dataDir, 'uploads');

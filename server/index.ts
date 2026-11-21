@@ -3,7 +3,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import app from './app';
+import app from './app.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const port=Number(process.env.PORT||3000);
 if (process.env.NODE_ENV === 'production') {

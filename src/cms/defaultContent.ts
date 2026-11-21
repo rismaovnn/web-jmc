@@ -1,4 +1,4 @@
-import type { CMSContent } from './schema';
+import type { CMSContent } from './schema.js';
 export const defaultContent: CMSContent = {
   hero:{eyebrow:'Creative Technology Studio',headline:'JuaraMetaCorp',tagline:'Immersive Digital Experiences',description:'We build metaverse worlds, virtual environments, websites, applications, and interactive digital experiences for education, businesses, entrepreneurs, and public institutions.',primaryLabel:'Start Project',primaryHref:'/contact',secondaryLabel:'Explore Products',secondaryHref:'/product',image:''},
   about:{description:'We bring creativity, digital innovation, and immersive experiences together to shape new possibilities.',vision:'To be a leading creative technology company delivering immersive digital worlds for Indonesia and beyond.',mission:'<ul><li>Deliver high-quality metaverse worlds, virtual environments, and interactive digital experiences.</li><li>Help education, businesses, small enterprises, and public institutions benefit from creative technology.</li><li>Build relevant, intuitive solutions that create meaningful value for the people using them.</li></ul>'},

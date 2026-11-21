@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server/index.ts",
-    "build": "npm run typecheck && vite build && npm run build:server",
+    "build": "npm run check:esm && npm run typecheck && vite build && npm run build:server",
     "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --packages=external --target=node22 --outfile=server-dist/index.mjs",
     "start": "node -e \"process.env.NODE_ENV='production'; import('./server-dist/index.mjs')\"",
     "preview": "vite preview",
@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit",
     "test:smoke": "node scripts/smoke-production.mjs",
     "test:unit": "tsx --test src/lib/http.test.ts",
-    "test": "npm run typecheck && npm run test:api && npm run test:unit"
+    "test": "npm run check:esm && npm run typecheck && npm run test:api && npm run test:unit",
+    "check:esm": "node scripts/check-esm-imports.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

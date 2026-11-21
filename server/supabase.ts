@@ -1,5 +1,5 @@
 /** Server-only Supabase REST and Storage transport. NEVER import from src/. */
-import type { SectionKey } from '../src/cms/schema';
+import type { SectionKey } from '../src/cms/schema.js';
 
 export const useSupabase = process.env.VERCEL === '1' || process.env.CMS_STORAGE === 'supabase';
 export const BUCKET = 'cms-images';

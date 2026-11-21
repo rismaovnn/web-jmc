@@ -1,0 +1,127 @@
+warning: in the working copy of 'api/index.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/app.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/cms.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/index.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/supabase.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/cms/defaultContent.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/api/index.ts b/api/index.ts[m
+[1mindex 0157f08..81800cf 100644[m
+[1m--- a/api/index.ts[m
+[1m+++ b/api/index.ts[m
+[36m@@ -1,3 +1,45 @@[m
+[31m-/** Vercel Function entry for all /api/* routes (no Vite or app.listen). */[m
+[31m-import app from '../server/app';[m
+[31m-export default app;[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Vercel Function entrypoint for all /api/* requests.[m
+[32m+[m[32m * This guard avoids an opaque HTML 500 when importing the Express app fails.[m
+[32m+[m[32m * It does not mask the root cause: the full error is logged in Vercel Functions.[m
+[32m+[m[32m */[m
+[32m+[m[32mimport type { IncomingMessage, ServerResponse } from 'node:http';[m
+[32m+[m
+[32m+[m[32mtype HttpHandler = (req: IncomingMessage, res: ServerResponse) => void;[m
+[32m+[m[32mlet appHandler: HttpHandler | null = null;[m
+[32m+[m
+[32m+[m[32mfunction sendJson(res: ServerResponse, status: number, data: Record<string, unknown>) {[m
+[32m+[m[32m  if (res.headersSent) return;[m
+[32m+[m[32m  res.statusCode = status;[m
+[32m+[m[32m  res.setHeader('Content-Type', 'application/json; charset=utf-8');[m
+[32m+[m[32m  res.setHeader('Cache-Control', 'no-store');[m
+[32m+[m[32m  res.setHeader('X-Content-Type-Options', 'nosniff');[m
+[32m+[m[32m  res.end(JSON.stringify(data));[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport default async function handler(req: IncomingMessage, res: ServerResponse) {[m
+[32m+[m[32m  const pathname = (req.url || '').split('?')[0];[m
+[32m+[m
+[32m+[m[32m  // Independent diagnostic: succeeds even if Supabase or the Express app cannot load.[m
+[32m+[m[32m  if (req.method === 'GET' && pathname === '/api/ping') {[m
+[32m+[m[32m    sendJson(res, 200, { status: 'ok', runtime: 'vercel-function', version: 'jmc-diagnostic-1' });[m
+[32m+[m[32m    return;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    // Lazy import makes module-load failures observable from inside the function.[m
+[32m+[m[32m    if (!appHandler) {[m
+[32m+[m[32m      const { default: app } = await import('../server/app.js');[m
+[32m+[m[32m      appHandler = app;[m
+[32m+[m[32m    }[m
+[32m+[m[32m    appHandler(req, res);[m
+[32m+[m[32m  } catch (error) {[m
+[32m+[m[32m    const err = error instanceof Error ? error : new Error(String(error));[m
+[32m+[m[32m    console.error('[JMC_BACKEND_STARTUP_FAILED]', err.stack || err.message);[m
+[32m+[m[32m    sendJson(res, 503, {[m
+[32m+[m[32m      status: 'error',[m
+[32m+[m[32m      code: 'BACKEND_STARTUP_FAILED',[m
+[32m+[m[32m      message: 'The CMS API could not start. Inspect Vercel Function Logs.',[m
+[32m+[m[32m    });[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[1mdiff --git a/server/app.ts b/server/app.ts[m
+[1mindex 5784bbb..8b8aa47 100644[m
+[1m--- a/server/app.ts[m
+[1m+++ b/server/app.ts[m
+[36m@@ -2,9 +2,9 @@[m
+ import 'dotenv/config';[m
+ import express, { type ErrorRequestHandler, type NextFunction, type Request, type Response } from 'express';[m
+ import nodemailer from 'nodemailer';[m
+[31m-import { validateInquiry } from './validation';[m
+[31m-import { cmsRouter, cmsPublic, uploadsRouter, readContent } from './cms';[m
+[31m-import { getSections, useSupabase, validateSupabaseConfig } from './supabase';[m
+[32m+[m[32mimport { validateInquiry } from './validation.js';[m
+[32m+[m[32mimport { cmsRouter, cmsPublic, uploadsRouter, readContent } from './cms.js';[m
+[32m+[m[32mimport { getSections, useSupabase, validateSupabaseConfig } from './supabase.js';[m
+ [m
+ const app = express();[m
+ const defaultDestination = 'juarametacorp@gmail.com';[m
+[1mdiff --git a/server/cms.ts b/server/cms.ts[m
+[1mindex 9c19422..f6de43f 100644[m
+[1m--- a/server/cms.ts[m
+[1m+++ b/server/cms.ts[m
+[36m@@ -6,9 +6,9 @@[m [mimport fs from 'node:fs/promises';[m
+ import express from 'express';[m
+ import sharp from 'sharp';[m
+ import sanitizeHtml from 'sanitize-html';[m
+[31m-import { defaultContent } from '../src/cms/defaultContent';[m
+[31m-import type { CMSContent, SectionKey } from '../src/cms/schema';[m
+[31m-import { useSupabase, getSections, putSection, getSession, putSession, deleteSession, uploadCmsImage, publicCmsImageUrl, getLoginFailures, recordLoginFailure, clearLoginFailures } from './supabase';[m
+[32m+[m[32mimport { defaultContent } from '../src/cms/defaultContent.js';[m
+[32m+[m[32mimport type { CMSContent, SectionKey } from '../src/cms/schema.js';[m
+[32m+[m[32mimport { useSupabase, getSections, putSection, getSession, putSession, deleteSession, uploadCmsImage, publicCmsImageUrl, getLoginFailures, recordLoginFailure, clearLoginFailures } from './supabase.js';[m
+ [m
+ export const dataDir = path.resolve(process.env.CMS_DATA_DIR || path.join(process.cwd(), 'data'));[m
+ const imageDir = path.join(dataDir, 'uploads');[m
+[1mdiff --git a/server/index.ts b/server/index.ts[m
+[1mindex 4a22ad2..ca33164 100644[m
+[1m--- a/server/index.ts[m
+[1m+++ b/server/index.ts[m
+[36m@@ -3,7 +3,7 @@[m [mimport 'dotenv/config';[m
+ import express from 'express';[m
+ import path from 'node:path';[m
+ import { fileURLToPath } from 'node:url';[m
+[31m-import app from './app';[m
+[32m+[m[32mimport app from './app.js';[m
+ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');[m
+ const port=Number(process.env.PORT||3000);[m
+ if (process.env.NODE_ENV === 'production') {[m
+[1mdiff --git a/server/supabase.ts b/server/supabase.ts[m
+[1mindex 2b4e7fc..fb6d374 100644[m
+[1m--- a/server/supabase.ts[m
+[1m+++ b/server/supabase.ts[m
+[36m@@ -1,5 +1,5 @@[m
+ /** Server-only Supabase REST and Storage transport. NEVER import from src/. */[m
+[31m-import type { SectionKey } from '../src/cms/schema';[m
+[32m+[m[32mimport type { SectionKey } from '../src/cms/schema.js';[m
+ [m
+ export const useSupabase = process.env.VERCEL === '1' || process.env.CMS_STORAGE === 'supabase';[m
+ export const BUCKET = 'cms-images';[m
+[1mdiff --git a/src/cms/defaultContent.ts b/src/cms/defaultContent.ts[m
+[1mindex 9d464b2..bdadb49 100644[m
+[1m--- a/src/cms/defaultContent.ts[m
+[1m+++ b/src/cms/defaultContent.ts[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-import type { CMSContent } from './schema';[m
+[32m+[m[32mimport type { CMSContent } from './schema.js';[m
+ export const defaultContent: CMSContent = {[m
+   hero:{eyebrow:'Creative Technology Studio',headline:'JuaraMetaCorp',tagline:'Immersive Digital Experiences',description:'We build metaverse worlds, virtual environments, websites, applications, and interactive digital experiences for education, businesses, entrepreneurs, and public institutions.',primaryLabel:'Start Project',primaryHref:'/contact',secondaryLabel:'Explore Products',secondaryHref:'/product',image:''},[m
+   about:{description:'We bring creativity, digital innovation, and immersive experiences together to shape new possibilities.',vision:'To be a leading creative technology company delivering immersive digital worlds for Indonesia and beyond.',mission:'<ul><li>Deliver high-quality metaverse worlds, virtual environments, and interactive digital experiences.</li><li>Help education, businesses, small enterprises, and public institutions benefit from creative technology.</li><li>Build relevant, intuitive solutions that create meaningful value for the people using them.</li></ul>'},[m

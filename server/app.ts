@@ -2,9 +2,9 @@
 import 'dotenv/config';
 import express, { type ErrorRequestHandler, type NextFunction, type Request, type Response } from 'express';
 import nodemailer from 'nodemailer';
-import { validateInquiry } from './validation';
-import { cmsRouter, cmsPublic, uploadsRouter, readContent } from './cms';
-import { getSections, useSupabase, validateSupabaseConfig } from './supabase';
+import { validateInquiry } from './validation.js';
+import { cmsRouter, cmsPublic, uploadsRouter, readContent } from './cms.js';
+import { getSections, useSupabase, validateSupabaseConfig } from './supabase.js';
 
 const app = express();
 const defaultDestination = 'juarametacorp@gmail.com';
@@ -86,6 +86,11 @@ app.post('/api/inquiries', inquiryLimit, async (req: Request, res: Response) => 
     console.error('Inquiry delivery failed:', code);
     res.status(502).json({ message: 'We could not send your message. Please try again later or email us directly.' });
   }
+});
+
+// Liveness check: does not require Supabase or CMS credentials.
+app.get('/api/ping', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'juarametacorp-api' });
 });
 
 app.get('/api/health', async (_req, res) => {
