@@ -1,0 +1,132 @@
+/* JuaraMetaCorp: integrated hero mascot from an actual MP4 sprite atlas.
+   The full 720x1280 recorded frame stays visible, never stretched or cropped. */
+.jmc-sprite-root {
+  --ambient-x: 0px;
+  --ambient-y: 0px;
+  --ambient-glow: .32;
+  --ambient-body: 0px;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 735px;
+  max-width: 640px;
+  margin-inline: auto;
+  padding: 20px 30px 50px;
+}
+.jmc-sprite-ambient {
+  position: absolute;
+  z-index: -3;
+  width: 108%;
+  aspect-ratio: 1;
+  top: 3%;
+  left: -4%;
+  border-radius: 999px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(55,145,255,.26), rgba(38,78,207,.13) 42%, transparent 73%);
+  filter: blur(32px);
+  transform: translate3d(calc(var(--ambient-x) * -.3), calc(var(--ambient-y) * -.3), 0);
+}
+.jmc-sprite-ring {
+  position: absolute;
+  z-index: -2;
+  aspect-ratio: 1;
+  border: 1px solid rgba(140, 190, 255, .17);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.jmc-sprite-ring-a {
+  width: 102%; top: 4%; left: -1%;
+  transform: translate3d(calc(var(--ambient-x) * -.45), calc(var(--ambient-y) * -.45), 0);
+}
+.jmc-sprite-ring-b {
+  width: 78%; top: 16%; left: 11%;
+  border-style: dashed;
+  border-color: rgba(170, 200, 255, .12);
+  transform: translate3d(calc(var(--ambient-x) * .2), calc(var(--ambient-y) * .2), 0);
+}
+.jmc-sprite-star {
+  position: absolute;
+  z-index: 3;
+  font-size: 26px;
+  color: #77c8ff;
+  text-shadow: 0 0 22px rgba(118,199,255,.8);
+  pointer-events: none;
+}
+.jmc-sprite-star-a {
+  left: 5%; top: 26%;
+  transform: translate3d(calc(var(--ambient-x) * -.6), calc(var(--ambient-y) * -.4), 0);
+}
+.jmc-sprite-star-b {
+  right: 7%; bottom: 26%; color: #b2a2ff;
+  transform: translate3d(calc(var(--ambient-x) * .7), calc(var(--ambient-y) * .5), 0);
+}
+.jmc-sprite-stage {
+  width: min(100%, 407px);
+  padding: 7px;
+  border: 1px solid rgba(173,210,255,.30);
+  border-radius: 32px;
+  overflow: hidden;
+  background: linear-gradient(150deg, rgba(158,199,255,.30), rgba(19,43,95,.45) 36%, rgba(3,12,34,.85));
+  box-shadow: 0 43px 120px rgba(0,5,30,.55), 0 0 90px rgba(55,123,239,var(--ambient-glow)), inset 0 1px 0 rgba(255,255,255,.17);
+  transform: translate3d(var(--ambient-body), 0, 0);
+  will-change: transform;
+}
+.jmc-sprite-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border-radius: 25px;
+  background: #151b29;
+}
+.jmc-sprite-poster, .jmc-sprite-canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity .2s ease;
+}
+.jmc-sprite-poster { opacity: 1; }
+.jmc-sprite-canvas { opacity: 0; }
+.sprite-is-ready .jmc-sprite-poster { opacity: 0; }
+.sprite-is-ready .jmc-sprite-canvas { opacity: 1; }
+.jmc-sprite-accent {
+  position: absolute;
+  right: -1%;
+  bottom: 10%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  z-index: 3;
+  border: 1px solid rgba(156,203,255,.22);
+  border-radius: 100px;
+  color: rgba(227,241,255,.85);
+  background: rgba(8,18,43,.85);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 34px rgba(0,3,20,.33);
+  font: 700 9px/1.2 ui-monospace, monospace;
+  letter-spacing: .11em;
+}
+.jmc-sprite-accent-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #67e8f9; box-shadow: 0 0 13px #67e8f9;
+}
+@media (max-width: 1023px) {
+  .jmc-sprite-root { min-height: 650px; max-width: 570px; }
+  .jmc-sprite-stage { width: min(100%, 365px); }
+}
+@media (max-width: 640px) {
+  .jmc-sprite-root { min-height: 520px; max-width: 470px; padding: 12px 30px 42px; }
+  .jmc-sprite-stage { width: min(100%, 295px); padding: 5px; border-radius: 23px; }
+  .jmc-sprite-frame { border-radius: 17px; }
+  .jmc-sprite-accent { right: 0; bottom: 9%; padding: 7px 9px; font-size: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jmc-sprite-poster, .jmc-sprite-canvas { transition: none; }
+  .jmc-sprite-stage { will-change: auto; }
+}

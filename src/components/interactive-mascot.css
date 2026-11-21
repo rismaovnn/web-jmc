@@ -1,0 +1,109 @@
+/* Half-body hero: one native-size PNG; actual mesh deformation in WebGL. */
+.mascot-spring-stage {
+  --mascot-parallax-x: 0px;
+  --mascot-parallax-y: 0px;
+  isolation: isolate;
+  position: relative;
+  width: 100%;
+  height: clamp(510px, 54vw, 740px);
+  min-width: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: layout style;
+}
+.mascot-spring-stage::before {
+  content: '';
+  position: absolute;
+  inset: 4% 0 3%;
+  border-radius: 48%;
+  background: radial-gradient(circle at 54% 45%, rgba(38, 154, 247, .18) 0, rgba(53, 94, 234, .08) 40%, transparent 71%);
+  filter: blur(26px);
+  pointer-events: none;
+  transform: translate3d(calc(var(--mascot-parallax-x) * -.25), calc(var(--mascot-parallax-y) * -.3), 0);
+}
+.mascot-spring-halo {
+  position: absolute;
+  inset: 5% 3% 5%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(84,130,248,.22), rgba(31,76,171,.09) 51%, transparent 70%);
+  filter: blur(14px);
+  transform: translate3d(calc(var(--mascot-parallax-x) * .2), calc(var(--mascot-parallax-y) * .2),0);
+  pointer-events: none;
+}
+.mascot-spring-ring {
+  pointer-events:none;
+  position:absolute;
+  border-radius:50%;
+  border:1px solid rgba(130,203,253,.15);
+  transform: translate3d(calc(var(--mascot-parallax-x) * -.35), calc(var(--mascot-parallax-y) * .25),0);
+}
+.mascot-spring-ring-one { width:94%; aspect-ratio:1; left:3%; top:7%; }
+.mascot-spring-ring-two { width:72%; aspect-ratio:1; left:14%; top:16%; border-style:dashed; border-color:rgba(145,227,255,.19); }
+.mascot-spring-figure {
+  outline: none;
+  cursor: pointer;
+  position: absolute;
+  inset: 4% 0 2%;
+  overflow: hidden;
+  border-radius: 36px;
+  border: 1px solid rgba(215,240,255,.11);
+  background: linear-gradient(180deg,rgba(24,50,107,.20),rgba(7,20,58,.10));
+  box-shadow: 0 30px 100px rgba(0,4,28,.28), inset 0 1px 0 rgba(255,255,255,.04);
+  animation: mascot-spring-float 4s ease-in-out infinite;
+  will-change: transform;
+}
+.mascot-spring-figure:focus-visible { outline:2px solid #67e8f9;outline-offset:-2px; }
+.mascot-spring-canvas,
+.mascot-spring-fallback {
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  display:block;
+  transition:opacity 250ms ease;
+  filter: drop-shadow(0 22px 18px rgba(1,12,44,.23));
+}
+.mascot-spring-canvas {width:100%;height:100%;opacity:0;}
+.mascot-spring-canvas.is-ready {opacity:1;}
+.mascot-spring-fallback {
+  height:200%;
+  width:auto;
+  max-width:none;
+  left:50%;
+  right:auto;
+  top:0;
+  transform:translateX(-50%);
+  object-fit:contain;
+  opacity:1;
+  -webkit-user-drag:none;
+}
+.mascot-spring-fallback.is-hidden {opacity:0;}
+.mascot-spring-bottom {
+  position:absolute;
+  left:50%;bottom:0;
+  transform:translateX(-50%);
+  pointer-events:none;
+  z-index:4;
+  white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  letter-spacing:.12em;
+  font-weight:600;
+  font-size:10px;
+  color:rgba(210,233,250,.72);
+}
+.mascot-spring-bottom span {color:#67e8f9;margin-inline:9px;}
+@keyframes mascot-spring-float {
+  0%,100% { transform:translate3d(0,4px,0); }
+  50% { transform:translate3d(0,-7px,0); }
+}
+@media (max-width:1023px) {
+  .mascot-spring-stage {margin-inline:auto;max-width:680px;height:clamp(490px,75vw,700px);}
+}
+@media (max-width:640px) {
+  .mascot-spring-stage {height:clamp(410px,112vw,560px);max-width:500px;}
+  .mascot-spring-figure {inset:4% 1% 3%;border-radius:28px;}
+  .mascot-spring-bottom {font-size:8px;letter-spacing:.06em;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .mascot-spring-figure {animation:none!important;}
+  .mascot-spring-stage {--mascot-parallax-x:0px!important;--mascot-parallax-y:0px!important;}
+}
