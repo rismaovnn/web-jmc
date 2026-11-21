@@ -236,8 +236,14 @@ export default function InteractiveMascot({
 
     function setViewSize() {
       if (!renderer) return;
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
+    const activeCanvas = canvas;
+
+if (!activeCanvas) {
+  return;
+}
+
+const width = activeCanvas.width;
+const height = activeCanvas.height;
       if (width <= 0 || height <= 0) return;
       camera.aspect = width / height;
       const viewHeight = 1.50; // top 50% of source: head, neck, shoulders and upper chest
