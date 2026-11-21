@@ -7,7 +7,7 @@ INI ADALAH PAKET WEBSITE LENGKAP, BUKAN DEMO TERPISAH.
 - `src/components/Hero.tsx` menggunakan `<SpriteMascot />` sebagai visual utama di sisi kanan.
 - `src/components/SpriteMascot.tsx` memasang mesin Vanilla JavaScript ke area Hero website.
 - `src/components/sprite-mascot.css` mengintegrasikan visual maskot dengan background JuaraMetaCorp dan responsivitas.
-- `src/mascot-engine/` berisi physics, tracking kursor, pose selection, atlas loader, dan renderer.
+- `src/mascot-engine/` berisiii physics, tracking kursor, pose selection, atlas loader, dan renderer.
 - `public/mascot-sprite/` berisi frame atlas hasil MP4 asli, poster, dan manifest metadata.
 - CMS, tombol Hero, navigasi, halaman lain, API, dan aset website dipertahankan.
 
