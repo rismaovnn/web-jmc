@@ -1,3 +1,5 @@
+> Untuk **Vercel + Supabase**, gunakan `DEPLOY_PRODUCTION.md`. Dokumen ini membahas mode file-backed lokal dan hosting dengan persistent disk.
+
 # JuaraMetaCorp CMS 2.0 — Installation & administration
 
 This version extends the existing React + Vite + Express website. It intentionally **does not migrate to Next.js**: it offers a lightweight, file-backed CMS (database migration can come later) while preserving the existing email inquiry endpoint and site design.

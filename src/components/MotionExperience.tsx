@@ -16,12 +16,14 @@ export default function MotionExperience({ children }: { children: ReactNode }) 
     if (prefersReducedMotion.matches || !('IntersectionObserver' in window)) return;
 
     const completionTimers = new Set<ReturnType<typeof setTimeout>>();
+    const animationFrames = new Set<number>();
     const intersection = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         const element = entry.target as HTMLElement;
         intersection.unobserve(element);
-        requestAnimationFrame(() => element.classList.add('jmc-motion-in'));
+        const id = requestAnimationFrame(() => { animationFrames.delete(id); element.classList.add('jmc-motion-in'); });
+        animationFrames.add(id);
         const delay = Number(element.dataset.jmcRevealDelay || '0');
         const timer = setTimeout(() => {
           element.classList.remove('jmc-motion-pending', 'jmc-motion-in');
@@ -108,6 +110,7 @@ export default function MotionExperience({ children }: { children: ReactNode }) 
       container.removeEventListener('pointermove', onMove);
       container.removeEventListener('pointerout', onOut);
       for (const timer of completionTimers) clearTimeout(timer);
+      for (const frame of animationFrames) cancelAnimationFrame(frame);
     };
   }, []);
 

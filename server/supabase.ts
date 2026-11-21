@@ -1,22 +1,22 @@
-/** Supabase REST transport. Runs ONLY on the server (never import from src/).
- * Uses the legacy service_role JWT. Do not put this secret in any VITE_ variable.
- */
+/** Server-only Supabase REST and Storage transport. NEVER import from src/. */
 import type { SectionKey } from '../src/cms/schema';
 
 export const useSupabase = process.env.VERCEL === '1' || process.env.CMS_STORAGE === 'supabase';
 export const BUCKET = 'cms-images';
-
 type CmsRow = { section: SectionKey; value: unknown };
 type CmsSessionRow = { id: string; csrf: string; expires_at: string };
+type LoginRow = { failures: number; updated_at: string };
 
 function settings() {
   const url = process.env.SUPABASE_URL?.trim().replace(/\/+$/, '');
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !key || !/^https:\/\//.test(url)) {
-    throw new Error('Supabase is not configured: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (server-only).');
+  // Prefer Supabase's current sb_secret_* API keys; legacy JWTs still work.
+  const key = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
+  if (!url || !/^https:\/\/[\w.-]+(?::\d+)?$/.test(url) || !key || key.startsWith('sb_publishable_')) {
+    throw new Error('Supabase storage is not configured: set SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) on the server.');
   }
   return { url, key };
 }
+export function validateSupabaseConfig() { settings(); }
 
 async function request<T>(route: string, method: string, body?: string | Uint8Array, extraHeaders: Record<string, string> = {}): Promise<T> {
   const { url, key } = settings();
@@ -24,17 +24,17 @@ async function request<T>(route: string, method: string, body?: string | Uint8Ar
     method,
     headers: {
       apikey: key,
-      Authorization: `Bearer ${key}`,
+      // sb_secret_* keys are NOT JWTs; sending them as Authorization Bearer causes Invalid JWT.
+      ...(!key.startsWith('sb_secret_') ? { Authorization: `Bearer ${key}` } : {}),
       Accept: 'application/json',
       ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
       ...extraHeaders,
     },
     ...(body === undefined ? {} : { body: body as BodyInit }),
-    signal: AbortSignal.timeout(20000),
+    signal: AbortSignal.timeout(15_000),
     cache: 'no-store',
   });
   if (!response.ok) {
-    // Never print keys or response bodies (which can contain private data).
     throw new Error(`Supabase ${method} ${route.split('?')[0]} failed (HTTP ${response.status}).`);
   }
   if (response.status === 204) return undefined as T;
@@ -56,12 +56,28 @@ export async function getSession(id: string): Promise<CmsSessionRow | null> {
   return rows[0] ?? null;
 }
 export async function putSession(id: string, csrf: string, expires_at: string): Promise<void> {
+  // Cleanup stale sessions/limits opportunistically on each admin login; no cron dependency.
+  await request(`/rest/v1/cms_sessions?expires_at=lt.${encodeURIComponent(new Date().toISOString())}`, 'DELETE');
+  await request(`/rest/v1/cms_login_attempts?updated_at=lt.${encodeURIComponent(new Date(Date.now()-24*60*60_000).toISOString())}`, 'DELETE');
   await request('/rest/v1/cms_sessions', 'POST', JSON.stringify([{ id, csrf, expires_at }]), {
     Prefer: 'return=minimal',
   });
 }
 export async function deleteSession(id: string): Promise<void> {
   await request(`/rest/v1/cms_sessions?id=eq.${encodeURIComponent(id)}`, 'DELETE');
+}
+// Shared rate-limiting between Vercel instances. RPC uses an atomic INSERT .. ON CONFLICT.
+export async function getLoginFailures(key: string): Promise<number> {
+  const rows = await request<LoginRow[]>(
+    `/rest/v1/cms_login_attempts?select=failures,updated_at&key=eq.${encodeURIComponent(key)}&limit=1`, 'GET');
+  const row = rows[0];
+  return row && Date.parse(row.updated_at) > Date.now() - 15 * 60_000 ? row.failures : 0;
+}
+export async function recordLoginFailure(key: string): Promise<void> {
+  await request('/rest/v1/rpc/cms_record_login_failure', 'POST', JSON.stringify({ p_key: key }));
+}
+export async function clearLoginFailures(key: string): Promise<void> {
+  await request(`/rest/v1/cms_login_attempts?key=eq.${encodeURIComponent(key)}`, 'DELETE');
 }
 export async function uploadCmsImage(filename: string, body: Buffer): Promise<string> {
   const key = `uploads/${filename}`;

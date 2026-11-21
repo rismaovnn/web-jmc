@@ -1,3 +1,4 @@
+import { requestJson } from '../lib/http';
 import { useState, type FormEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ArrowUpRight, CheckCircle2, LoaderCircle, Mail, MessageSquareText, AlertCircle } from 'lucide-react';
@@ -30,19 +31,11 @@ export default function ContactPage() {
     }
     setSending(true);
     try {
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 30_000);
-      let response: Response;
-      try {
-        response = await fetch('/api/inquiries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name.trim(), email: email.trim(), projectType, details: details.trim(), website }),
-          signal: controller.signal,
-        });
-      } finally { window.clearTimeout(timeout); }
-      const result: { message?: string } = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.message || 'We could not send your message. Please try again.');
+      const result = await requestJson<{message?:string}>('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), projectType, details: details.trim(), website }),
+      });
       setNotice({ kind: 'success', text: result.message || 'Your project inquiry has been sent successfully.' });
       setName(''); setEmail(''); setProjectType(projectTypes[0]); setDetails(''); setWebsite('');
     } catch (error) {

@@ -1,0 +1,1310 @@
+--- a/.env.example
++++ b/.env.example
+@@ -1,24 +1,19 @@
+-# Server-side ONLY — never use VITE_ prefixes for SMTP secrets.
+-# Turn on Google 2-Step Verification, then generate an App Password in your Google Account.
++# Copy to .env for LOCAL development. Do not commit .env or put any secret in VITE_*.
++PORT=3000
++# Local CMS initially uses data/cms.json and data/uploads. After migration, enable Supabase:
++# CMS_STORAGE=supabase
++# REQUIRED in Vercel (auto uses Supabase when VERCEL=1):
++SUPABASE_URL=https://YOUR_PROJECT.supabase.co
++# Preferred secret key (Supabase > Project Settings > API Keys; sb_secret_...)
++SUPABASE_SECRET_KEY=
++# Alternative for legacy projects ONLY; do not fill in both:
++# SUPABASE_SERVICE_ROLE_KEY=
++# Generate the hash locally: npm run cms:setup
++CMS_ADMIN_PASSWORD_HASH=
++# Your deployed production origin (no slash), used for cross-site protection:
++# PUBLIC_ORIGIN=https://your-domain.com
++# Optional, for contact form email:
+ SMTP_USER=juarametacorp@gmail.com
+ SMTP_APP_PASSWORD=
+-
+-# Site port: npm run dev and npm start both serve the frontend and API here.
+-PORT=3000
+-
+-# Optional. Set when deployed behind a trusted reverse proxy; do not blindly enable.
++# Only behind a trusted reverse proxy outside Vercel:
+ TRUST_PROXY_HOPS=0
+-# Optional origin restriction in production (exact scheme + host, no trailing slash)
+-# PUBLIC_ORIGIN=https://your-official-domain.com
+-
+-# CMS: run npm run cms:setup to generate this value securely.
+-CMS_ADMIN_PASSWORD_HASH=
+-# Optional persistent writable storage directory for production hosting
+-# CMS_DATA_DIR=/var/lib/juarametacorp
+-
+-# REQUIRED on Vercel (server only; never use VITE_ or commit actual secrets):
+-SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+-SUPABASE_SERVICE_ROLE_KEY=
+-# On local npm run dev, opt into Supabase after running migration:
+-# CMS_STORAGE=supabase
+-# On Vercel VERCEL=1 automatically enables Supabase; local file mode stays available.
+--- a/CMS_SETUP_GUIDE.md
++++ b/CMS_SETUP_GUIDE.md
+@@ -1,3 +1,5 @@
++> Untuk **Vercel + Supabase**, gunakan `DEPLOY_PRODUCTION.md`. Dokumen ini membahas mode file-backed lokal dan hosting dengan persistent disk.
++
+ # JuaraMetaCorp CMS 2.0 — Installation & administration
+ 
+ This version extends the existing React + Vite + Express website. It intentionally **does not migrate to Next.js**: it offers a lightweight, file-backed CMS (database migration can come later) while preserving the existing email inquiry endpoint and site design.
+--- a/README.md
++++ b/README.md
+@@ -1,6 +1,6 @@
+ # JuaraMetaCorp Website + CMS v2.0
+ 
+-**New:** Secure `/admin` dashboard for Hero, About, Products, Partners, Leadership, Contact and Footer. See **[CMS_SETUP_GUIDE.md](CMS_SETUP_GUIDE.md)** before updating your current website. Keep your existing `.env` (Gmail SMTP credentials) and back up your custom images before copying source files. This edition remains React + Vite + Express with JSON persistence instead of moving to Next.js. The `preview.html` is a legacy static mockup; use `npm run dev` to view the actual CMS-powered website.
++**New:** Secure `/admin` dashboard for Hero, About, Products, Partners, Leadership, Contact and Footer. See **[CMS_SETUP_GUIDE.md](CMS_SETUP_GUIDE.md)** before updating your current website. Keep your existing `.env` (Gmail SMTP credentials) and back up your custom images before copying source files. This edition remains React + Vite + Express. Local CMS can use file persistence; Vercel CMS uses Supabase Postgres and Storage. See `DEPLOY_PRODUCTION.md`. The `preview.html` is a legacy static mockup; use `npm run dev` to view the actual CMS-powered website.
+ 
+ ---
+ 
+@@ -55,7 +55,7 @@
+ 
+ **Never share your App Password in chat, push `.env` to Git, or use a `VITE_` prefix for email credentials.** An App Password usually requires Google 2-Step Verification.
+ 
+-This ZIP intentionally omits a stale `package-lock.json` because npm's registry could not be reached during packaging. Run `npm install` once on your own computer to generate a synchronized lockfile. After this, `npm ci` is available for reproducible future installs.
++This ZIP **includes** `package-lock.json`. Use `npm ci` for reproducible installs; never commit Windows `node_modules` to a Linux Vercel deployment. GitHub Actions runs `npm ci`, tests and build on Linux.
+ 
+ ## Build and deploy
+ 
+@@ -117,4 +117,4 @@
+ 
+ ## Deployment ke Vercel + Supabase (CMS persisten)
+ 
+-**PENTING:** Untuk Vercel, ikuti **`VERCEL_SUPABASE_SETUP.md`** terlebih dahulu. Dokumentasi `CMS_SETUP_GUIDE.md` mendeskripsikan mode lokal/hosting persistent disk; Vercel menggunakan Supabase Database dan Storage sebagai penyimpanan permanen. Sebelum upgrade dari versi lama, migrasikan `data/cms.json` dan `data/uploads` memakai `scripts/migrate-local-cms.mjs`.
++**PENTING:** Untuk Vercel, ikuti **`DEPLOY_PRODUCTION.md`** (ringkasan: `VERCEL_SUPABASE_SETUP.md`) terlebih dahulu. Dokumentasi `CMS_SETUP_GUIDE.md` mendeskripsikan mode lokal/hosting persistent disk; Vercel menggunakan Supabase Database dan Storage sebagai penyimpanan permanen. Sebelum upgrade dari versi lama, migrasikan `data/cms.json` dan `data/uploads` memakai `scripts/migrate-local-cms.mjs`.
+--- a/README_MULAI_DI_SINI.md
++++ b/README_MULAI_DI_SINI.md
+@@ -51,9 +51,13 @@
+ - Premium Hero, Services, Our Products, Partners Marquee, About + Vision/Mission, Leadership, Contact, Footer.
+ - Tiga project awal: Rumah Adat Lampung 360 (Google Drive), MetaSchool SMKN 4 Bandar Lampung, dan SMK Al Kautsar (Roblox).
+ - Empat partner tetap tersedia: PT Bukit Asam, SMKN 4 Bandar Lampung, STKIP PGRI Bandar Lampung, Universitas Teknokrat Indonesia.
+-- CMS aman berbasis file JSON, login password scrypt, session cookie httpOnly, CSRF, upload gambar WebP, dan autosave.
++- CMS aman dengan Supabase Database/Storage di Vercel (mode file JSON hanya untuk lokal), login password scrypt, cookie httpOnly, CSRF, upload WebP, dan autosave.
+ - Contact API melalui Gmail SMTP (kredensial hanya di `.env` pada server).
+ 
+ **Penting untuk hosting:** CMS file-based perlu penyimpanan permanen (`data/`) dan satu proses Node.js; untuk deployment serverless gunakan database/object storage.
+ 
+ Baca juga `CMS_SETUP_GUIDE.md`, `CONTACT_SETUP.md`, dan `PROJECT_LIVE_LINKS_GUIDE.md` untuk rincian teknis.
++
++## Deploy Vercel (penting)
++
++Untuk Vercel **jangan** mengandalkan `data/uploads/` atau `data/cms.json`. Gunakan Supabase Database/Storage. Panduan baru ada di **`DEPLOY_PRODUCTION.md`**. Setting Root Directory Vercel adalah repository root `./`, **bukan** path Windows.
+--- a/VERCEL_SUPABASE_SETUP.md
++++ b/VERCEL_SUPABASE_SETUP.md
+@@ -1,79 +1,17 @@
+-# JuaraMetaCorp CMS — Deployment Vercel + Supabase
++# Panduan terbaru: Vercel + Supabase untuk CMS JuaraMetaCorp
+ 
+-## Apa yang berubah
++**Gunakan `DEPLOY_PRODUCTION.md` sebagai panduan resmi untuk versi ini.** Panduan tersebut menjelaskan pengaturan Root Directory Git repository, cara kerja `api/index.ts` sebagai Vercel Function, Environment Variables, migrasi konten/foto, serta pengujian produksi.
+ 
+-- React UI/Admin tetap sama; `/api/content` tetap dipakai website.
+-- Backend Express diekspor melalui `api/index.ts` sebagai Vercel Function.
+-- `vercel.json` mengarahkan `/api/*` ke Function dan seluruh rute React ke `index.html`.
+-- Setiap section disimpan sebagai row `public.cms_sections` (bukan `data/cms.json` di serverless).
+-- Foto yang diupload diolah dengan Sharp lalu disimpan di Supabase Storage (bukan `data/uploads` di serverless).
+-- Session admin disimpan di table `cms_sessions`, dengan SID di-cookie dan hash SID dalam database.
+-- Local development tanpa Supabase tetap memakai file; `CMS_STORAGE=supabase` mengaktifkan mode Supabase di local.
+-- Sebelum request upload, browser mengecilkan gambar besar menjadi WebP agar berada di bawah batas request Vercel standar 4.5MB.
++## Ringkasan cepat
+ 
+-## Persiapan (sekali saja)
++1. Vercel: pilih **Vite**, Root Directory **`./`** (folder `package.json` di root repo, **BUKAN path lokal `D:\...`**), Build **`npm run build`**, Output **`dist`**.
++2. `api/index.ts` adalah **Vercel Function entrypoint** yang mengimpor aplikasi Express dari `server/app.ts`. `server/index.ts` hanya menjalankan server pada Node lokal.
++3. Jalankan `supabase/schema.sql` di SQL Editor Supabase (termasuk tabel pembatas login baru).
++4. Isi Environment Variables server di Vercel: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (rekomendasi; `sb_secret_...`) atau `SUPABASE_SERVICE_ROLE_KEY` (legacy JWT), `CMS_ADMIN_PASSWORD_HASH`, dan opsional `PUBLIC_ORIGIN`, `SMTP_USER`, `SMTP_APP_PASSWORD`.
++5. Migrasikan foto/konten dari `data/` menggunakan `node --env-file=.env scripts/migrate-local-cms.mjs` **sebelum** mengganti website live. Jangan gunakan `--force` tanpa backup.
++6. Jalankan `npm ci`, `npm test`, dan `npm run build`; push ke Git. Setelah deploy jalankan `npm run test:smoke -- https://domain-kamu.vercel.app`.
++7. Uji login, edit teks, upload foto, refresh, dan redeploy. Setelah upgrade satu kali, perubahan CMS disimpan di Supabase tanpa redeploy.
+ 
+-1. Backup folder proyek sekarang, khususnya `.env`, `data/cms.json`, dan seluruh `data/uploads`.
+-2. Buat project di <https://supabase.com/dashboard>. Pilih region dekat pengunjung atau Vercel Function.
+-3. Buka **SQL Editor**, paste isi `supabase/schema.sql` lalu **Run**. Ini membuat `cms_sections`, `cms_sessions`, dan bucket publik `cms-images`.
+-4. Di Supabase **Project Settings > API Keys**, ambil **Project URL** dan **legacy service_role key**. Simpan privat; JANGAN pakai `VITE_`, jangan commit `.env`. Key ini sangat sensitif dan harus tetap di server saja.
+-5. Pada folder lokal, buat/perbarui `.env` (jangan hapus konfigurasi SMTP atau CMS password yang sudah ada):
++**Keamanan:** Jangan commit `.env`, jangan pakai `VITE_` untuk API secret, dan jangan menggunakan anon/publishable key untuk server. Preview yang memakai kredensial production dapat mengubah database live.
+ 
+-```dotenv
+-SUPABASE_URL=https://project-id.supabase.co
+-SUPABASE_SERVICE_ROLE_KEY=ISI_LEGACY_SERVICE_ROLE_SECRET
+-# PENTING: tidak perlu CMS_STORAGE=supabase sampai migrasi selesai
+-```
+-
+-6. Untuk mengirim **dua gambar lama beserta seluruh perubahan konten** di `data/cms.json`, jalankan dari terminal pada folder root:
+-
+-```sh
+-node --env-file=.env scripts/migrate-local-cms.mjs
+-```
+-
+-Perintah akan **menolak menimpa** konten bila database sudah terisi. Jangan gunakan `--force` tanpa backup; opsi itu dapat mengganti perubahan website production.
+-
+-7. Tambahkan ini ke `.env` lokal agar melihat konten yang sama dengan production:
+-
+-```dotenv
+-CMS_STORAGE=supabase
+-```
+-
+-8. Di Vercel: Project > Settings > Environment Variables. Tambahkan:
+-
+-```dotenv
+-SUPABASE_URL=https://project-id.supabase.co
+-SUPABASE_SERVICE_ROLE_KEY=ISI_LEGACY_SERVICE_ROLE_SECRET
+-CMS_ADMIN_PASSWORD_HASH=scrypt$...$...
+-PUBLIC_ORIGIN=https://DOMAIN-PRODUCTION-MU
+-SMTP_USER=...
+-SMTP_APP_PASSWORD=...
+-```
+-
+-`CMS_ADMIN_PASSWORD_HASH` ambil dari `.env` hasil `npm run cms:setup`; jangan masukkan password plaintext. `PUBLIC_ORIGIN` untuk production URL yang benar; pada Preview deployment, jika menggunakan host berbeda, sesuaikan environment/aturan origin agar request Admin diterima. Jangan menggunakan `VITE_` pada secret.
+-
+-9. Pastikan pengaturan deployment **Framework: Vite**, **Root Directory: folder berisi package.json**, Build command: `npm run build`, Output directory: `dist` (sudah tertulis di `vercel.json`). Push perubahan kode ini ke Git lalu deploy sekali untuk upgrade backend. **Setelah upgrade, perubahan foto/konten tidak memerlukan deploy ulang.**
+-10. Kunjungi `https://DOMAIN/api/health` → JSON `{"status":"ok"}` dan `https://DOMAIN/api/content` → JSON CMS (bukan HTML). Buka `https://DOMAIN/admin`, login, ubah salah satu teks dan upload satu foto; lihat website publik dan cek konten tetap ada setelah refresh/redeploy.
+-
+-## Penting
+-
+-- **Tidak bisa mengubah konten hosting yang saat ini aktif tanpa minimal satu deployment awal.** Deployment tersebut memasang kode API/DB yang baru; berikutnya perubahan konten lewat admin tidak perlu deploy.
+-- `data/uploads/*.webp` tidak pernah ikut Git karena `.gitignore`. Script migrasi membawa file gambar tersebut dari komputer ke Supabase; **jalankan sebelum deploy jika ingin foto lama tetap tampil**.
+-- Jangan menjadikan `data/cms.json` sebagai database production pada Vercel; data lama hanya dipakai untuk migrasi.
+-- Rute `/uploads/xxx.webp` lama tidak lagi menjadi tujuan gambar CMS baru; setelah migrasi, URL gambar berganti menjadi `https://...supabase.co/storage/v1/object/public/cms-images/...`.
+-- Bucket bersifat **publik untuk membaca gambar**. Jangan masukkan materi rahasia ke bucket. Service role key hanya boleh di backend dan dapat melewati RLS.
+-- Gambar 8MB bisa diterima melalui UI asalkan browser berhasil melakukan kompresi sebelum upload. Untuk browser yang tidak bisa kompresi, gunakan gambar lebih kecil; request >4.5MB biasanya ditolak Vercel.
+-- Preview deployments juga membaca database production jika memakai env yang sama; **jangan edit lewat Preview** kecuali bermaksud mengubah konten live. Untuk isolasi gunakan project Supabase terpisah.
+-- Batasi brute-force login di Vercel Firewall/rate limiting pada `/api/admin/login`: Map limit sebelumnya masih hanya per-instance dan tidak cukup sebagai proteksi terdistribusi.
+-- Lakukan backup Supabase database serta Storage secara rutin, dan cek kuota layanan; permanen berarti tidak hilang pada redeploy, bukan pengganti backup.
+-
+-## Troubleshooting
+-
+-- `/api/content` menampilkan HTML: cek `vercel.json` urutan rewrites / API Function deployment.
+-- `/api/content` 500: cek Supabase env, nama tabel, dan Vercel Function Logs.
+-- Admin login 503/500: cek `CMS_ADMIN_PASSWORD_HASH`, `cms_sessions`, dan service role key.
+-- Upload 413: gambar melewati limit body request Function; kompres / resize sebelum upload.
+-- Upload 503: cek bucket `cms-images` benar-benar dibuat, `SUPABASE_SERVICE_ROLE_KEY`, dan Supabase Function logs.
+-- Gambar lama 404: jalankan migrasi dan pastikan URL gambar di `cms_sections` telah berubah dari `/uploads/...` ke Supabase public URL.
+-- `403 Cross-site requests are blocked`: `PUBLIC_ORIGIN` harus sama **persis** dengan URL halaman admin, misalnya `https://www.example.com` vs `https://example.com`.
+-- Upload berhasil tetapi admin belum sempat menyimpan field: tunggu label 'Saved successfully' atau klik **Save now**; file yang belum direferensikan tetap berada di bucket.
++**Detail troubleshooting, daftar error dan langkah deploy lengkap:** [`DEPLOY_PRODUCTION.md`](DEPLOY_PRODUCTION.md).
+--- a/package.json
++++ b/package.json
+@@ -5,15 +5,19 @@
+   "type": "module",
+   "scripts": {
+     "dev": "tsx watch server/index.ts",
+-    "build": "vite build && npm run build:server",
++    "build": "npm run typecheck && vite build && npm run build:server",
+     "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --packages=external --target=node22 --outfile=server-dist/index.mjs",
+     "start": "node -e \"process.env.NODE_ENV='production'; import('./server-dist/index.mjs')\"",
+     "preview": "vite preview",
+-    "lint": "tsc --noEmit",
+-    "test:api": "node --experimental-strip-types --test server/inquiries.test.mjs",
++    "lint": "npm run typecheck",
++    "test:api": "tsx --test server/api.test.ts server/inquiries.test.mjs",
+     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('server-dist',{recursive:true,force:true})\"",
+     "cms:setup": "node server/setup-admin.mjs",
+-    "cms:check": "node server/verify-package.mjs"
++    "cms:check": "node server/verify-package.mjs",
++    "typecheck": "tsc --noEmit",
++    "test:smoke": "node scripts/smoke-production.mjs",
++    "test:unit": "tsx --test src/lib/http.test.ts",
++    "test": "npm run typecheck && npm run test:api && npm run test:unit"
+   },
+   "dependencies": {
+     "@google/genai": "^2.4.0",
+@@ -45,5 +49,8 @@
+     "tsx": "^4.21.0",
+     "typescript": "^7.0.2",
+     "@types/sanitize-html": "^2.16.0"
++  },
++  "engines": {
++    "node": "22.x"
+   }
+ }
+--- a/scripts/migrate-local-cms.mjs
++++ b/scripts/migrate-local-cms.mjs
+@@ -6,15 +6,15 @@
+ import { readFile } from 'node:fs/promises';
+ import { resolve, basename } from 'node:path';
+ const url = process.env.SUPABASE_URL?.trim().replace(/\/+$/, '');
+-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
++const serviceKey = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
+ if (!url || !serviceKey || !/^https:\/\//.test(url)) {
+- console.error('Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY. Load .env with: node --env-file=.env scripts/migrate-local-cms.mjs');
++ console.error('Missing SUPABASE_URL / SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY). Load .env with: node --env-file=.env scripts/migrate-local-cms.mjs');
+  process.exit(1);
+ }
+ const sections=['hero','about','products','partners','leadership','contact','footer'];
+ const http = async (route, method, body, extra={}) => {
+  const resp = await fetch(`${url}${route}`, {
+-  method, headers:{apikey:serviceKey,Authorization:`Bearer ${serviceKey}`,Accept:'application/json',...extra},
++  method, headers:{apikey:serviceKey,...(!serviceKey.startsWith('sb_secret_')?{Authorization:`Bearer ${serviceKey}`}:{}) ,Accept:'application/json',...extra},
+   ...(body===undefined?{}:{body}), signal:AbortSignal.timeout(30000),
+  });
+  if (!resp.ok) { const msg=await resp.text(); throw Error(`Supabase ${method} ${route.split('?')[0]}: HTTP ${resp.status} (${msg.slice(0,180)})`); }
+@@ -58,4 +58,4 @@
+  'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal',
+ });
+ console.log('Migration complete! Images:',memo.size,'Sections:',sections.filter(s=>s in original).length);
+-console.log('Now set CMS_STORAGE=supabase in local .env and SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in Vercel.');
++console.log('Now set CMS_STORAGE=supabase in local .env and SUPABASE_URL / SUPABASE_SECRET_KEY in Vercel.');
+--- a/server/app.ts
++++ b/server/app.ts
+@@ -1,14 +1,15 @@
+-/** JuaraMetaCorp — server-owned inquiry API. Secrets never enter the Vite client bundle. */
++/** Express API shared between local Node and the Vercel Node.js Function. */
+ import 'dotenv/config';
+-import express, { type NextFunction, type Request, type Response } from 'express';
++import express, { type ErrorRequestHandler, type NextFunction, type Request, type Response } from 'express';
+ import nodemailer from 'nodemailer';
+ import { validateInquiry } from './validation';
+ import { cmsRouter, cmsPublic, uploadsRouter, readContent } from './cms';
++import { getSections, useSupabase, validateSupabaseConfig } from './supabase';
+ 
+ const app = express();
+ const defaultDestination = 'juarametacorp@gmail.com';
+-// Configure TRUST_PROXY_HOPS (typically 1) only when deployed behind a trusted proxy.
+-app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 0));
++// Vercel supplies the trusted edge proxy. On other infrastructure, default to zero.
++app.set('trust proxy', process.env.VERCEL === '1' ? 1 : Number(process.env.TRUST_PROXY_HOPS || 0));
+ app.disable('x-powered-by');
+ app.use((_req, res, next) => {
+   res.setHeader('X-Content-Type-Options', 'nosniff');
+@@ -16,77 +17,58 @@
+   res.setHeader('X-Frame-Options', 'DENY');
+   next();
+ });
++// No wildcard CORS: frontend & CMS use the same Vercel origin.
++app.use('/api', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
+ app.use('/api', express.json({ limit: '256kb', type: 'application/json' }));
+-// CMS APIs and persisted uploads run before the SPA/Vite fallback.
+ app.get('/api/content', cmsPublic);
+ app.use('/api/admin', cmsRouter);
+ app.use('/uploads', uploadsRouter);
+ 
+-// Lightweight per-IP protection. In multi-instance production use a shared rate-limit store.
+-const requestsByIp = new Map<string, { count: number; resetAt: number }>();
+-const intervalMs = 15 * 60_000;
+-const allowedAttempts = 5;
+-function rateLimit(req: Request, res: Response, next: NextFunction) {
++// Per-instance inquiry limiter, supplemental to spam honeypot; for high volume use a shared store.
++const attempts = new Map<string, { count: number; resetAt: number }>();
++function inquiryLimit(req: Request, res: Response, next: NextFunction) {
+   const now = Date.now();
+-  const key = req.ip || 'unknown';
+-  let entry = requestsByIp.get(key);
+-  if (!entry || now >= entry.resetAt) {
+-    entry = { count: 0, resetAt: now + intervalMs };
+-    requestsByIp.set(key, entry);
++  const ip = req.ip || 'unknown';
++  const item = attempts.get(ip);
++  const current = !item || item.resetAt < now ? {count: 0, resetAt: now + 15 * 60_000} : item;
++  if (current.count >= 5) {
++    res.setHeader('Retry-After', String(Math.ceil((current.resetAt - now) / 1000)));
++    res.status(429).json({ message: 'Too many inquiries. Please try again later.' }); return;
+   }
+-  entry.count += 1;
+-  if (entry.count > allowedAttempts) {
+-    res.setHeader('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
+-    res.status(429).json({ message: 'Too many inquiries. Please try again later.' });
+-    return;
+-  }
+-  next();
++  current.count++; attempts.set(ip, current); next();
+ }
+-setInterval(() => {
+-  const now = Date.now();
+-  for (const [key, value] of requestsByIp) if (now > value.resetAt) requestsByIp.delete(key);
+-}, intervalMs).unref();
++const inquiryCleanup = setInterval(() => {
++  for (const [ip, value] of attempts) if (value.resetAt < Date.now()) attempts.delete(ip);
++}, 15 * 60_000);
++inquiryCleanup.unref();
+ 
+-app.post('/api/inquiries', rateLimit, async (req: Request, res: Response) => {
+-  res.setHeader('Cache-Control', 'no-store');
+-  // A browser-site-only endpoint: reject cross-site submission and non-JSON posts.
++app.post('/api/inquiries', inquiryLimit, async (req: Request, res: Response) => {
+   const origin = req.get('Origin');
+-  const expectedOrigin = process.env.PUBLIC_ORIGIN?.replace(/\/$/, '');
+-  if (expectedOrigin && origin && origin !== expectedOrigin) {
+-    res.status(403).json({ message: 'Origin not allowed.' });
+-    return;
++  const expected = process.env.PUBLIC_ORIGIN?.trim().replace(/\/$/, '') || `https://${req.get('host')}`;
++  if ((origin && origin !== expected) || req.get('sec-fetch-site') === 'cross-site') {
++    res.status(403).json({ message: 'Origin not allowed.' }); return;
+   }
+   if (!req.is('application/json')) {
+-    res.status(415).json({ message: 'Please submit the form as JSON.' });
+-    return;
++    res.status(415).json({ message: 'Please submit the form as JSON.' }); return;
+   }
+-  // Hidden honeypot input: bots get an inconspicuous OK without sending email.
+   if (req.body && typeof req.body.website === 'string' && req.body.website.trim()) {
+-    res.status(200).json({ message: 'Your message was sent successfully.' });
+-    return;
++    res.json({ message: 'Your message was sent successfully.' }); return;
+   }
+   const inquiry = validateInquiry(req.body);
+   if (!inquiry) {
+-    res.status(400).json({ message: 'Please enter a valid name, email, project type, and project details (20–5000 characters).' });
+-    return;
++    res.status(400).json({ message: 'Please enter a valid name, email, project type, and project details (20–5000 characters).' }); return;
+   }
+   const smtpUser = process.env.SMTP_USER?.trim();
+   const smtpPassword = process.env.SMTP_APP_PASSWORD?.replace(/\s/g, '');
+   if (!smtpUser || !smtpPassword) {
+-    res.status(503).json({ message: 'Email service is not configured yet. Please try again later.' });
+-    return;
++    res.status(503).json({ message: 'Email service is not configured. Please contact us directly.' }); return;
+   }
+   try {
+     const transporter = nodemailer.createTransport({
+-      host: 'smtp.gmail.com',
+-      port: 465,
+-      secure: true,
++      host: 'smtp.gmail.com', port: 465, secure: true,
+       auth: { user: smtpUser, pass: smtpPassword },
+-      connectionTimeout: 10_000,
+-      greetingTimeout: 10_000,
+-      socketTimeout: 20_000,
+-      disableFileAccess: true,
+-      disableUrlAccess: true,
++      connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000,
++      disableFileAccess: true, disableUrlAccess: true,
+     });
+     await transporter.sendMail({
+       from: { name: 'JuaraMetaCorp Website', address: smtpUser },
+@@ -94,32 +76,40 @@
+       replyTo: { name: inquiry.name, address: inquiry.email },
+       subject: `New Project Inquiry – ${inquiry.projectType}`,
+       text: [
+-        `Name: ${inquiry.name}`,
+-        `Email: ${inquiry.email}`,
+-        `Project Type: ${inquiry.projectType}`,
+-        'Project Details:',
+-        inquiry.details,
++        `Name: ${inquiry.name}`, `Email: ${inquiry.email}`,
++        `Project Type: ${inquiry.projectType}`, 'Project Details:', inquiry.details,
+       ].join('\n'),
+     });
+     res.status(200).json({ message: 'Your project inquiry has been sent successfully. We will be in touch soon.' });
+   } catch (error) {
+-    // Log only the SMTP error class/code; never log secrets or inquiry PII.
+     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : 'UNKNOWN';
+-    console.error('Inquiry mail delivery failed:', code);
++    console.error('Inquiry delivery failed:', code);
+     res.status(502).json({ message: 'We could not send your message. Please try again later or email us directly.' });
+   }
+ });
+ 
+-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+-app.use('/api', (_req, res) => res.status(404).json({ message: 'Not found.' }));
+-
+-app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+-  if (error instanceof SyntaxError || (typeof error === 'object' && error !== null && 'type' in error)) {
+-    res.status(400).json({ message: 'Invalid or oversized request body.' });
+-    return;
++app.get('/api/health', async (_req, res) => {
++  try {
++    if (useSupabase) { validateSupabaseConfig(); await getSections(); }
++    if (!process.env.CMS_ADMIN_PASSWORD_HASH) throw new Error('CMS_ADMIN_PASSWORD_HASH missing.');
++    res.json({ status: 'ok', storage: useSupabase ? 'supabase' : 'local' });
++  } catch (error) {
++    console.error('API readiness failed:', error instanceof Error ? error.message : 'Unknown error');
++    res.status(503).json({ status: 'error', message: 'CMS storage unavailable. Check server environment and Supabase schema.' });
+   }
+-  console.error('Unexpected server error');
+-  res.status(500).json({ message: 'An unexpected error occurred.' });
+ });
+ 
++// API never falls through into Vite or a browser HTML error page.
++app.use('/api', (_req, res) => res.status(404).json({ message: 'API route not found.' }));
++const apiErrorHandler: ErrorRequestHandler = (error: unknown, req: Request, res: Response, _next: NextFunction) => {
++  if (res.headersSent) return _next(error);
++  const e = error as { type?: string; status?: number; message?: string } | null;
++  const isBodyError = !!e && (
++    e.type === 'entity.parse.failed' || e.type === 'entity.too.large' || e.type === 'encoding.unsupported'
++  );
++  const status = isBodyError ? (e?.type === 'entity.too.large' ? 413 : 400) : 500;
++  if (status === 500) console.error('API unhandled error:', req.method, req.path, error instanceof Error ? error.message : 'unknown');
++  res.status(status).json({ message: status === 413 ? 'Request body too large.' : status === 400 ? 'Invalid JSON request body.' : 'An unexpected server error occurred.' });
++};
++app.use(apiErrorHandler);
+ export default app;
+--- a/server/cms.ts
++++ b/server/cms.ts
+@@ -1,4 +1,4 @@
+-/** File-backed CMS. Admin routes are same-origin and use httpOnly session cookies + CSRF. */
++/** Persistent Supabase CMS on Vercel; optional local file CMS in development. */
+ import { Router, type Request, type Response, type NextFunction } from 'express';
+ import crypto from 'node:crypto';
+ import path from 'node:path';
+@@ -8,17 +8,26 @@
+ import sanitizeHtml from 'sanitize-html';
+ import { defaultContent } from '../src/cms/defaultContent';
+ import type { CMSContent, SectionKey } from '../src/cms/schema';
+-import { useSupabase, getSections, putSection, getSession, putSession, deleteSession, uploadCmsImage } from './supabase';
++import { useSupabase, getSections, putSection, getSession, putSession, deleteSession, uploadCmsImage, publicCmsImageUrl, getLoginFailures, recordLoginFailure, clearLoginFailures } from './supabase';
+ 
+ export const dataDir = path.resolve(process.env.CMS_DATA_DIR || path.join(process.cwd(), 'data'));
+ const imageDir = path.join(dataDir, 'uploads');
+ const contentFile = path.join(dataDir, 'cms.json');
+-export const uploadsRouter = express.static(imageDir, { index:false, immutable:true, maxAge:'30d', dotfiles:'deny', fallthrough:false });
++// Existing /uploads paths are served locally or redirected to their migrated Supabase legacy objects.
++export const uploadsRouter = Router();
++if (!useSupabase) uploadsRouter.use(express.static(imageDir, { index:false, immutable:true, maxAge:'30d', dotfiles:'deny', fallthrough:true }));
++if (useSupabase) uploadsRouter.get('/:filename', (req, res) => {
++ const file=req.params.filename;
++ if (!/^[a-f0-9-]{36}\.webp$/i.test(file)) {res.status(404).json({message:'Image not found.'});return;}
++ res.redirect(302, publicCmsImageUrl(`legacy/${file}`));
++});
++uploadsRouter.use((_req, res) => res.status(404).json({message:'Image not found.'}));
+ const admin = Router();
+ const sessions = new Map<string,{csrf:string;expires:number}>();
+-const loginAttempts = new Map<string,{count:number;reset:number}>();
++const loginAttempts = new Map<string,{count:number;reset:number}>(); // local mode only
+ const sessionDuration = 12*60*60*1000;
+ const sections:SectionKey[]=['hero','about','products','partners','leadership','contact','footer'];
++const validSectionValue=(key:SectionKey,v:unknown)=>['products','partners','leadership'].includes(key) ? Array.isArray(v) : !!v && typeof v==='object' && !Array.isArray(v);
+ const cleanText=(v:unknown,max=1500)=>typeof v==='string'?v.trim().slice(0,max):'';
+ const url=(v:unknown, allowInternal=false)=>{
+  if(typeof v!=='string'||!v.trim())return '';
+@@ -156,23 +165,32 @@
+  const expected=Buffer.from(match[2],'hex');return crypto.timingSafeEqual(actual,expected);
+ }
+ const noStore=(_req:Request,res:Response,next:NextFunction)=>{res.setHeader('Cache-Control','no-store');next();};
+-const secureCookie=(process.env.NODE_ENV==='production'||process.env.VERCEL==='1')?'; Secure':'';
+-function cookie(value:string,maxAge:number){return `jmc_cms_sid=${value}; HttpOnly; SameSite=Strict; Path=/api/admin; Max-Age=${maxAge}${secureCookie}`;}
++function cookie(req:Request,value:string,maxAge:number){
++ const secure = process.env.VERCEL==='1' || req.secure ? '; Secure' : '';
++ return `jmc_cms_sid=${value}; HttpOnly; SameSite=Strict; Path=/api/admin; Max-Age=${maxAge}${secure}`;
++}
+ admin.use(noStore);
+ admin.get('/session',async(req,res,next)=>{try{const sess=await currentSession(req);if(!sess){res.status(401).json({authenticated:false});return;}res.json({authenticated:true,csrfToken:sess.csrf});}catch(err){next(err)}});
+ admin.post('/login',sameOrigin,async(req,res,next)=>{
+- const key=req.ip||'unknown';const now=Date.now();const entry=loginAttempts.get(key)||{count:0,reset:now+15*60*1000};
+- if(now>entry.reset){entry.count=0;entry.reset=now+15*60*1000;}
+- if(entry.count>=8){res.status(429).json({message:'Too many login attempts. Try again in 15 minutes.'});return;}
+- if(!process.env.CMS_ADMIN_PASSWORD_HASH){res.status(503).json({message:'Admin password not configured. Run npm run cms:setup on the server.'});return;}
+- const password=typeof req.body?.password==='string'?req.body.password:'';
+- if(password.length>1024||!verifyPassword(password)){entry.count++;loginAttempts.set(key,entry);res.status(401).json({message:'Incorrect password.'});return;}
+- const sid=crypto.randomBytes(32).toString('hex');const session={csrf:crypto.randomBytes(32).toString('hex'),expires:now+sessionDuration};
+- try {
+-  if(useSupabase) await putSession(crypto.createHash('sha256').update(sid).digest('hex'),session.csrf,new Date(session.expires).toISOString());
+-  else sessions.set(sid,session);
+-  loginAttempts.delete(key);
+-  res.setHeader('Set-Cookie',cookie(sid,sessionDuration/1000));res.json({authenticated:true,csrfToken:session.csrf});
++ try {
++  if(!process.env.CMS_ADMIN_PASSWORD_HASH){res.status(503).json({message:'CMS password hash missing in Vercel Environment Variables. Run npm run cms:setup.'});return;}
++  const key=crypto.createHmac('sha256',process.env.CMS_ADMIN_PASSWORD_HASH||'local').update(req.ip||'unknown').digest('hex');
++  const now=Date.now();
++  const local=loginAttempts.get(key);
++  const failures=useSupabase?await getLoginFailures(key):(local&&local.reset>now?local.count:0);
++  if(failures>=8){res.setHeader('Retry-After','900');res.status(429).json({message:'Too many login attempts. Try again in 15 minutes.'});return;}
++  const password=typeof req.body?.password==='string'?req.body.password:'';
++  if(!password || password.length>1024 || !verifyPassword(password)){
++   if(useSupabase)await recordLoginFailure(key);
++   else loginAttempts.set(key,{count:failures+1,reset:now+15*60_000});
++   res.status(401).json({message:'Incorrect password.'});return;
++  }
++  const sid=crypto.randomBytes(32).toString('hex');
++  const session={csrf:crypto.randomBytes(32).toString('hex'),expires:now+sessionDuration};
++  if(useSupabase){await putSession(crypto.createHash('sha256').update(sid).digest('hex'),session.csrf,new Date(session.expires).toISOString());await clearLoginFailures(key);}
++  else{sessions.set(sid,session);loginAttempts.delete(key);}
++  res.setHeader('Set-Cookie',cookie(req,sid,sessionDuration/1000));
++  res.status(200).json({authenticated:true,csrfToken:session.csrf});
+  }catch(err){next(err)}
+ });
+ admin.post('/logout',sameOrigin,requireSession,csrf,async(req,res,next)=>{
+@@ -180,18 +198,18 @@
+   const sid=parseCookies(req).jmc_cms_sid;
+   if(useSupabase) await deleteSession(crypto.createHash('sha256').update(sid).digest('hex'));
+   else sessions.delete(sid);
+-  res.setHeader('Set-Cookie',cookie('',0));res.json({success:true});
++  res.setHeader('Set-Cookie',cookie(req,'',0));res.json({success:true});
+  }catch(err){next(err)}
+ });
+ admin.put('/content/:section',sameOrigin,requireSession,csrf,async(req,res)=>{
+  const section=req.params.section as SectionKey;
+  if(!sections.includes(section)){res.status(404).json({message:'Unknown section.'});return;}
+- if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)){res.status(400).json({message:'Invalid content.'});return;}
++ if(!req.body||typeof req.body!=='object'||Array.isArray(req.body)||!validSectionValue(section,req.body.value)){res.status(400).json({message:'Invalid content section or value.'});return;}
+  try {const result=await updateSection(section,req.body.value);res.json({saved:true,value:result});}catch(err){console.error('CMS save failed:',(err as Error).message);res.status(503).json({message:'Unable to save CMS data. Check Supabase configuration/table and function logs.'});}
+ });
+-admin.post('/upload',sameOrigin,requireSession,csrf,express.raw({type:['image/png','image/jpeg','image/webp','image/avif'],limit:'8mb'}),async(req,res)=>{
++admin.post('/upload',sameOrigin,requireSession,csrf,express.raw({type:['image/png','image/jpeg','image/webp','image/avif'],limit:'4mb'}),async(req,res)=>{
+  const body=req.body;
+- if(!Buffer.isBuffer(body)||!body.length){res.status(400).json({message:'Choose a JPG, PNG, WebP, or AVIF image (up to 8 MB).'});return;}
++ if(!Buffer.isBuffer(body)||!body.length){res.status(400).json({message:'Choose a JPG, PNG, WebP, or AVIF image below 4 MB (browser auto-compresses larger images).'});return;}
+  try {
+   const processed=await sharp(body,{limitInputPixels:30_000_000,failOn:'error'}).rotate().resize({width:1920,height:1200,fit:'inside',withoutEnlargement:true}).webp({quality:82,effort:4}).toBuffer();
+   const id=crypto.randomUUID();
+@@ -207,5 +225,8 @@
+  }catch{res.status(415).json({message:'Image could not be processed. Upload a valid image file.'});}
+ });
+ export const cmsRouter=admin;
+-export function cmsPublic(req:Request,res:Response){res.setHeader('Cache-Control','no-store');readContent().then(c=>res.json(c)).catch(()=>res.status(500).json({message:'Content unavailable.'}));}
++export async function cmsPublic(_req:Request,res:Response){
++ try {res.json(await readContent());}
++ catch(err){console.error('CMS content read failed:',err instanceof Error?err.message:'unknown');res.status(503).json({message:'CMS content unavailable. Check Supabase environment and schema.'});}
++}
+ setInterval(()=>{const now=Date.now();for(const [key,v] of sessions)if(v.expires<=now)sessions.delete(key);for(const [key,v] of loginAttempts)if(v.reset<=now)loginAttempts.delete(key);},15*60*1000).unref();
+--- a/server/supabase.ts
++++ b/server/supabase.ts
+@@ -1,22 +1,22 @@
+-/** Supabase REST transport. Runs ONLY on the server (never import from src/).
+- * Uses the legacy service_role JWT. Do not put this secret in any VITE_ variable.
+- */
++/** Server-only Supabase REST and Storage transport. NEVER import from src/. */
+ import type { SectionKey } from '../src/cms/schema';
+ 
+ export const useSupabase = process.env.VERCEL === '1' || process.env.CMS_STORAGE === 'supabase';
+ export const BUCKET = 'cms-images';
+-
+ type CmsRow = { section: SectionKey; value: unknown };
+ type CmsSessionRow = { id: string; csrf: string; expires_at: string };
++type LoginRow = { failures: number; updated_at: string };
+ 
+ function settings() {
+   const url = process.env.SUPABASE_URL?.trim().replace(/\/+$/, '');
+-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+-  if (!url || !key || !/^https:\/\//.test(url)) {
+-    throw new Error('Supabase is not configured: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (server-only).');
++  // Prefer Supabase's current sb_secret_* API keys; legacy JWTs still work.
++  const key = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
++  if (!url || !/^https:\/\/[\w.-]+(?::\d+)?$/.test(url) || !key || key.startsWith('sb_publishable_')) {
++    throw new Error('Supabase storage is not configured: set SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) on the server.');
+   }
+   return { url, key };
+ }
++export function validateSupabaseConfig() { settings(); }
+ 
+ async function request<T>(route: string, method: string, body?: string | Uint8Array, extraHeaders: Record<string, string> = {}): Promise<T> {
+   const { url, key } = settings();
+@@ -24,17 +24,17 @@
+     method,
+     headers: {
+       apikey: key,
+-      Authorization: `Bearer ${key}`,
++      // sb_secret_* keys are NOT JWTs; sending them as Authorization Bearer causes Invalid JWT.
++      ...(!key.startsWith('sb_secret_') ? { Authorization: `Bearer ${key}` } : {}),
+       Accept: 'application/json',
+       ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
+       ...extraHeaders,
+     },
+     ...(body === undefined ? {} : { body: body as BodyInit }),
+-    signal: AbortSignal.timeout(20000),
++    signal: AbortSignal.timeout(15_000),
+     cache: 'no-store',
+   });
+   if (!response.ok) {
+-    // Never print keys or response bodies (which can contain private data).
+     throw new Error(`Supabase ${method} ${route.split('?')[0]} failed (HTTP ${response.status}).`);
+   }
+   if (response.status === 204) return undefined as T;
+@@ -56,12 +56,28 @@
+   return rows[0] ?? null;
+ }
+ export async function putSession(id: string, csrf: string, expires_at: string): Promise<void> {
++  // Cleanup stale sessions/limits opportunistically on each admin login; no cron dependency.
++  await request(`/rest/v1/cms_sessions?expires_at=lt.${encodeURIComponent(new Date().toISOString())}`, 'DELETE');
++  await request(`/rest/v1/cms_login_attempts?updated_at=lt.${encodeURIComponent(new Date(Date.now()-24*60*60_000).toISOString())}`, 'DELETE');
+   await request('/rest/v1/cms_sessions', 'POST', JSON.stringify([{ id, csrf, expires_at }]), {
+     Prefer: 'return=minimal',
+   });
+ }
+ export async function deleteSession(id: string): Promise<void> {
+   await request(`/rest/v1/cms_sessions?id=eq.${encodeURIComponent(id)}`, 'DELETE');
++}
++// Shared rate-limiting between Vercel instances. RPC uses an atomic INSERT .. ON CONFLICT.
++export async function getLoginFailures(key: string): Promise<number> {
++  const rows = await request<LoginRow[]>(
++    `/rest/v1/cms_login_attempts?select=failures,updated_at&key=eq.${encodeURIComponent(key)}&limit=1`, 'GET');
++  const row = rows[0];
++  return row && Date.parse(row.updated_at) > Date.now() - 15 * 60_000 ? row.failures : 0;
++}
++export async function recordLoginFailure(key: string): Promise<void> {
++  await request('/rest/v1/rpc/cms_record_login_failure', 'POST', JSON.stringify({ p_key: key }));
++}
++export async function clearLoginFailures(key: string): Promise<void> {
++  await request(`/rest/v1/cms_login_attempts?key=eq.${encodeURIComponent(key)}`, 'DELETE');
+ }
+ export async function uploadCmsImage(filename: string, body: Buffer): Promise<string> {
+   const key = `uploads/${filename}`;
+--- a/src/cms/ContentContext.tsx
++++ b/src/cms/ContentContext.tsx
+@@ -1,13 +1,14 @@
+ import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+ import { defaultContent } from './defaultContent';
+ import type { CMSContent } from './schema';
++import { requestJson } from '../lib/http';
+ const ContentContext = createContext<CMSContent>(defaultContent);
+ export const useContent = () => useContext(ContentContext);
+ export function ContentProvider({children}:{children:ReactNode}) {
+   const [content,setContent] = useState<CMSContent>(defaultContent);
+   useEffect(()=>{
+     let alive = true;
+-    const refresh=()=>fetch('/api/content',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(alive)setContent(data)}).catch(()=>{});
++    const refresh=()=>requestJson<CMSContent>('/api/content').then(data=>{if(alive)setContent(data)}).catch(()=>{/* Leave last known/default content visible if API is temporarily down. */});
+     refresh();
+     const t=window.setInterval(refresh,30000);
+     window.addEventListener('focus',refresh);
+--- a/src/components/MotionExperience.tsx
++++ b/src/components/MotionExperience.tsx
+@@ -16,12 +16,14 @@
+     if (prefersReducedMotion.matches || !('IntersectionObserver' in window)) return;
+ 
+     const completionTimers = new Set<ReturnType<typeof setTimeout>>();
++    const animationFrames = new Set<number>();
+     const intersection = new IntersectionObserver((entries) => {
+       for (const entry of entries) {
+         if (!entry.isIntersecting) continue;
+         const element = entry.target as HTMLElement;
+         intersection.unobserve(element);
+-        requestAnimationFrame(() => element.classList.add('jmc-motion-in'));
++        const id = requestAnimationFrame(() => { animationFrames.delete(id); element.classList.add('jmc-motion-in'); });
++        animationFrames.add(id);
+         const delay = Number(element.dataset.jmcRevealDelay || '0');
+         const timer = setTimeout(() => {
+           element.classList.remove('jmc-motion-pending', 'jmc-motion-in');
+@@ -108,6 +110,7 @@
+       container.removeEventListener('pointermove', onMove);
+       container.removeEventListener('pointerout', onOut);
+       for (const timer of completionTimers) clearTimeout(timer);
++      for (const frame of animationFrames) cancelAnimationFrame(frame);
+     };
+   }, []);
+ 
+--- a/src/components/PartnerMarquee.tsx
++++ b/src/components/PartnerMarquee.tsx
+@@ -1,4 +1,4 @@
+-import { useRef, type PointerEvent, type MouseEvent } from 'react';
++import { useEffect, useRef, type PointerEvent, type MouseEvent } from 'react';
+ import { ArrowUpRight, BriefcaseBusiness, GraduationCap, Landmark, School } from 'lucide-react';
+ import { useContent } from '../cms/ContentContext';
+ import type { Partner } from '../cms/schema';
+@@ -49,6 +49,7 @@
+   const dragRef = useRef<DragSession | null>(null);
+   const suppressClickRef = useRef(false);
+   const rafRef = useRef<number | null>(null);
++  useEffect(() => () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); }, []);
+ 
+   function pointerDown(e: PointerEvent<HTMLDivElement>) {
+     if (e.pointerType === 'mouse' && e.button !== 0) return;
+--- a/src/pages/AdminPage.tsx
++++ b/src/pages/AdminPage.tsx
+@@ -3,6 +3,7 @@
+ import { Link } from 'react-router-dom';
+ import { defaultContent } from '../cms/defaultContent';
+ import type { CMSContent, SectionKey } from '../cms/schema';
++import { ApiError, requestJson } from '../lib/http';
+ import '../cms/admin.css';
+ const tabs: {key:SectionKey;label:string;icon:string}[]=[
+  {key:'hero',label:'Hero Section',icon:'✦'}, {key:'about',label:'About & Mission',icon:'◎'},
+@@ -10,7 +11,7 @@
+  {key:'leadership',label:'Leadership',icon:'♟'},{key:'contact',label:'Contact',icon:'✉'},
+  {key:'footer',label:'Footer',icon:'▤'}
+ ];
+-const api=(path:string,init?:RequestInit)=>fetch('/api/admin'+path,{credentials:'same-origin',...init});
++const api=<T,>(path:string,init?:RequestInit)=>requestJson<T>(`/api/admin${path}`,init);
+ const uniqueId=()=>`cms-${crypto.randomUUID()}`;
+ function Field({label,value,onChange,placeholder='',multiline=false,type='text'}:{label:string;value:string;onChange:(v:string)=>void;placeholder?:string;multiline?:boolean;type?:string}){
+  return <label className="cms-field"><span>{label}</span>{multiline?<textarea rows={4} value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>:<input type={type} value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
+@@ -49,8 +50,8 @@
+  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+  async function upload(file:File){if(!file)return;if(file.size>8*1024*1024){setError('Maximum image size: 8 MB');return;}setBusy(true);setError('');try{
+  const prepared=await prepareImageForVercel(file);
+- const response=await api('/upload',{method:'POST',headers:{'Content-Type':prepared.type,'X-CMS-CSRF':csrf},body:prepared});
+- const result=await response.json();if(!response.ok)throw new Error(result.message||'Upload failed');onChange(result.url);
++ const result=await api<{url:string;bytes:number}>('/upload',{method:'POST',headers:{'Content-Type':prepared.type,'X-CMS-CSRF':csrf},body:prepared});
++ onChange(result.url);
+  }catch(err){setError(err instanceof Error?err.message:'Upload failed');}finally{setBusy(false)}}
+  return <div className="cms-field cms-upload"><span>{label}</span><div className="cms-upload-layout"><div className="cms-upload-preview">{value?<img src={value} alt="Uploaded image preview" onError={e=>{e.currentTarget.style.opacity='.1'}}/>:<ImagePlus size={27}/>}</div><div className="cms-upload-actions"><label className="cms-btn cms-btn-subtle cms-file-label">{busy?<LoaderCircle size={16} className="cms-spin"/>:<ImagePlus size={16}/>} {busy?'Optimizing…':'Upload image'}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(file);e.target.value=''}}/></label><small>JPG, PNG, WebP, AVIF • Up to 8 MB • Auto-optimized before upload</small></div></div>
+  <input value={value||''} onChange={e=>onChange(e.target.value)} placeholder="Or enter an existing image URL /images/..." aria-label={`${label} URL`}/>{error&&<small role="alert" className="cms-error">{error}</small>}</div>;
+@@ -80,19 +81,65 @@
+  const [password,setPassword]=useState(''),[csrf,setCsrf]=useState(''),[initializing,setInitializing]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [section,setSection]=useState<SectionKey>('hero'),[content,setContent]=useState<CMSContent>(defaultContent),[saved,setSaved]=useState<CMSContent>(defaultContent),[status,setStatus]=useState('All changes saved');
+  const [mobileNav,setMobileNav]=useState(false);
+- async function load(){try{const r=await fetch('/api/content',{cache:'no-store'});if(!r.ok)throw Error('Could not load website content');const c=await r.json() as CMSContent;setContent(c);setSaved(c)}catch(e){setError(e instanceof Error?e.message:'Content unavailable')}}
+- useEffect(()=>{let active=true;api('/session').then(async r=>{const data=await r.json();if(active&&r.ok){setCsrf(data.csrfToken);await load()}}).catch(()=>{}).finally(()=>{if(active)setInitializing(false)});return ()=>{active=false}},[]);
+- async function signIn(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{const response=await api('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});const data=await response.json();if(!response.ok)throw Error(data.message||'Login failed');setCsrf(data.csrfToken);setPassword('');await load()}catch(e){setError(e instanceof Error?e.message:'Login failed')}finally{setBusy(false)}}
+- async function logout(){await api('/logout',{method:'POST',headers:{'X-CMS-CSRF':csrf}}).catch(()=>{});setCsrf('');setContent(defaultContent)}
++ async function load(){
++  try {const c=await requestJson<CMSContent>('/api/content');setContent(c);setSaved(c);setError('');}
++  catch(e){setError(e instanceof Error?e.message:'Content unavailable');}
++ }
++ useEffect(()=>{
++  let active=true;
++  api<{authenticated:boolean;csrfToken:string}>('/session').then(async data=>{
++   if(active && data.authenticated){setCsrf(data.csrfToken);await load();}
++  }).catch(e=>{
++   if(active && !(e instanceof ApiError && e.status===401)) setError(e instanceof Error?e.message:'Unable to reach CMS API.');
++  }).finally(()=>{if(active)setInitializing(false)});
++  return ()=>{active=false};
++ },[]);
++ async function signIn(e:FormEvent){
++  e.preventDefault();setBusy(true);setError('');
++  try {
++   const data=await api<{authenticated:boolean;csrfToken:string}>('/login',{
++    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})
++   });
++   setCsrf(data.csrfToken);setPassword('');await load();
++  }catch(e){setError(e instanceof Error?e.message:'Login failed')}
++  finally{setBusy(false)}
++ }
++ async function logout(){
++  try {await api<{success:boolean}>('/logout',{method:'POST',headers:{'X-CMS-CSRF':csrf}});setCsrf('');setContent(defaultContent);}
++  catch(e){setError(e instanceof Error?e.message:'Logout failed')}
++ }
+  const pending=useMemo(()=>tabs.filter(({key})=>JSON.stringify(content[key])!==JSON.stringify(saved[key])).map(t=>t.key),[content,saved]);
+  const saving=useRef(new Set<SectionKey>());
++ const latest=useRef(content);
++ latest.current=content;
+  async function saveOne(key:SectionKey,value:CMSContent[SectionKey]){
+-  if(saving.current.has(key))return; saving.current.add(key);setStatus('Saving changes…');
+-  try{const r=await api(`/content/${key}`,{method:'PUT',headers:{'Content-Type':'application/json','X-CMS-CSRF':csrf},body:JSON.stringify({value})});const data=await r.json();if(!r.ok)throw Error(data.message||'Save failed');
+-   setSaved(old=>({...old,[key]:value}));setStatus('Saved successfully');setError('');
+-  }catch(e){setError(e instanceof Error?e.message:'Save failed');setStatus('Save failed')}finally{saving.current.delete(key)}
++  if(saving.current.has(key))return;
++  saving.current.add(key);setStatus('Saving changes…');
++  let success=false;
++  try {
++   const result=await api<{saved:boolean;value:CMSContent[SectionKey]}>(`/content/${key}`,{
++    method:'PUT',headers:{'Content-Type':'application/json','X-CMS-CSRF':csrf},body:JSON.stringify({value})
++   });
++   setSaved(old=>({...old,[key]:result.value}));
++   // Keep the canonical server value in sync when the user has not typed again.
++   setContent(old=>JSON.stringify(old[key])===JSON.stringify(value)?{...old,[key]:result.value}:old);
++   setStatus('Saved successfully');setError('');success=true;
++  }catch(e){setError(e instanceof Error?e.message:'Save failed');setStatus('Save failed')}
++  finally{
++   saving.current.delete(key);
++   // A user may have typed while the previous save was in flight: persist the latest snapshot.
++   if(success && JSON.stringify(latest.current[key])!==JSON.stringify(value)) {
++    window.setTimeout(()=>void saveOne(key,latest.current[key]),300);
++   }
++  }
+  }
+- useEffect(()=>{if(!csrf||!pending.length)return;const timeout=window.setTimeout(()=>{for(const key of pending){if(!saving.current.has(key))void saveOne(key,content[key])}},1200);return ()=>window.clearTimeout(timeout)},[content,saved,csrf,pending.join(',')]);
++ useEffect(()=>{
++  if(!csrf||!pending.length)return;
++  const timeout=window.setTimeout(()=>{
++   for(const key of pending) if(!saving.current.has(key)) void saveOne(key,content[key]);
++  },1200);
++  return ()=>window.clearTimeout(timeout);
++ },[content,saved,csrf,pending.join(',')]);
+  async function saveAll(){for(const key of pending)await saveOne(key,content[key]);}
+  function changeSection(value:CMSContent[SectionKey]){setContent(old=>({...old,[section]:value}));setStatus('Unsaved changes…')}
+  if(initializing)return <div className="cms-app cms-center"><LoaderCircle className="cms-spin"/> Checking administrator session…</div>;
+--- a/src/pages/ContactPage.tsx
++++ b/src/pages/ContactPage.tsx
+@@ -1,3 +1,4 @@
++import { requestJson } from '../lib/http';
+ import { useState, type FormEvent } from 'react';
+ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+ import { ArrowUpRight, CheckCircle2, LoaderCircle, Mail, MessageSquareText, AlertCircle } from 'lucide-react';
+@@ -30,19 +31,11 @@
+     }
+     setSending(true);
+     try {
+-      const controller = new AbortController();
+-      const timeout = window.setTimeout(() => controller.abort(), 30_000);
+-      let response: Response;
+-      try {
+-        response = await fetch('/api/inquiries', {
+-          method: 'POST',
+-          headers: { 'Content-Type': 'application/json' },
+-          body: JSON.stringify({ name: name.trim(), email: email.trim(), projectType, details: details.trim(), website }),
+-          signal: controller.signal,
+-        });
+-      } finally { window.clearTimeout(timeout); }
+-      const result: { message?: string } = await response.json().catch(() => ({}));
+-      if (!response.ok) throw new Error(result.message || 'We could not send your message. Please try again.');
++      const result = await requestJson<{message?:string}>('/api/inquiries', {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ name: name.trim(), email: email.trim(), projectType, details: details.trim(), website }),
++      });
+       setNotice({ kind: 'success', text: result.message || 'Your project inquiry has been sent successfully.' });
+       setName(''); setEmail(''); setProjectType(projectTypes[0]); setDetails(''); setWebsite('');
+     } catch (error) {
+--- a/supabase/schema.sql
++++ b/supabase/schema.sql
+@@ -1,5 +1,4 @@
+--- Run ONCE in Supabase Dashboard > SQL Editor.
+--- Only the server-side service_role key can access CMS content and sessions through API.
++-- Idempotent setup: run in Supabase SQL Editor, including when upgrading an existing project.
+ create table if not exists public.cms_sections (
+   section text primary key check (section in ('hero','about','products','partners','leadership','contact','footer')),
+   value jsonb not null,
+@@ -10,16 +9,34 @@
+   csrf text not null,
+   expires_at timestamptz not null
+ );
+-create index if not exists cms_sessions_expires_at_idx on public.cms_sessions (expires_at);
++create index if not exists cms_sessions_expires_at_idx on public.cms_sessions(expires_at);
++create table if not exists public.cms_login_attempts (
++  key text primary key,
++  failures integer not null default 0,
++  updated_at timestamptz not null default now()
++);
++create index if not exists cms_login_attempts_updated_at_idx on public.cms_login_attempts(updated_at);
++-- Safe atomic limiter for concurrent requests on different serverless instances.
++create or replace function public.cms_record_login_failure(p_key text)
++returns void language plpgsql security invoker set search_path = '' as $$
++begin
++  insert into public.cms_login_attempts (key, failures, updated_at) values (p_key, 1, now())
++  on conflict (key) do update set
++    failures = case when public.cms_login_attempts.updated_at < now() - interval '15 minutes' then 1 else least(10000, public.cms_login_attempts.failures + 1) end,
++    updated_at = now();
++end;
++$$;
+ 
+ alter table public.cms_sections enable row level security;
+ alter table public.cms_sessions enable row level security;
+--- No policies for anon/authenticated; request access using server-side service_role only.
+-revoke all on table public.cms_sections, public.cms_sessions from anon, authenticated;
+-grant all on table public.cms_sections, public.cms_sessions to service_role;
++alter table public.cms_login_attempts enable row level security;
++revoke all on table public.cms_sections, public.cms_sessions, public.cms_login_attempts from anon, authenticated;
++revoke all on function public.cms_record_login_failure(text) from public, anon, authenticated;
++grant all on table public.cms_sections, public.cms_sessions, public.cms_login_attempts to service_role;
++grant execute on function public.cms_record_login_failure(text) to service_role;
+ 
+--- Public bucket: website visitors can view images; only server-side service_role can upload.
+-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+-values ('cms-images', 'cms-images', true, 8388608, array['image/webp'])
+-on conflict (id) do update set public = excluded.public;
+--- No public INSERT/UPDATE/DELETE policies. Service role bypasses RLS.
++-- Public read-only images; upload/write only via server secret key.
++insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
++values ('cms-images','cms-images',true,8388608,array['image/webp'])
++on conflict (id) do update set public = excluded.public,
++  file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+--- a/vercel.json
++++ b/vercel.json
+@@ -4,7 +4,14 @@
+   "buildCommand": "npm run build",
+   "outputDirectory": "dist",
+   "rewrites": [
++    { "source": "/api", "destination": "/api/index" },
+     { "source": "/api/:path*", "destination": "/api/index" },
+     { "source": "/(.*)", "destination": "/index.html" }
++  ],
++  "headers": [
++    { "source": "/api/(.*)", "headers": [
++      { "key": "Cache-Control", "value": "no-store" },
++      { "key": "X-Content-Type-Options", "value": "nosniff" }
++    ] }
+   ]
+ }
+--- /dev/null
++++ b/.github/workflows/ci.yml
+@@ -0,0 +1,19 @@
++name: Verify JuaraMetaCorp
++on:
++  push:
++  pull_request:
++jobs:
++  validate:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-node@v4
++        with:
++          node-version: '22'
++          cache: npm
++      - name: Install reproducibly
++        run: npm ci
++      - name: TypeScript and integration tests
++        run: npm test
++      - name: Production build
++        run: npm run build
+--- /dev/null
++++ b/AUDIT_REPORT.md
+@@ -0,0 +1,83 @@
++# Audit Teknis JuaraMetaCorp — React/Vite/Express/Supabase/Vercel
++
++Tanggal audit: 21 November 2026. Sumber: `JuaraMetaCorp_CMS_Vercel_Supabase.zip` terbaru yang dikirim sebelumnya dalam percakapan. Ini **audit terhadap source code yang tersedia**, bukan klaim akses ke Vercel, Supabase, atau GitHub milik pengguna.
++
++## Ringkasan keputusan
++
++Pertahankan React+Vite dan Express. Di Vercel, kode `api/index.ts` adalah **Vercel Function** yang mengekspor aplikasi `server/app.ts` (Express tidak perlu `.listen()` di dalam Function). `server/index.ts` tetap untuk Node lokal / standalone. Rewrite `/api/*` harus diarahkan ke fungsi `/api/index` **sebelum** catch-all SPA `/index.html`. `npm run build` tetap membuat frontend statis `dist` dan standalone server `server-dist` untuk `npm start`. Vercel menggunakan entrypoint `api/index.ts` sebagai Function, bukan `server-dist`.
++
++Storage di Vercel wajib Supabase Postgres dan Supabase Storage. Local file mode boleh dipakai selama development. Root Directory **`./`** hanya bila `package.json` ada pada root repo Git yang terhubung; pengaturan Root Directory di dashboard Vercel tetap harus diperiksa secara manual.
++
++## Temuan utama, dampak, dan perbaikan
++
++| Prioritas | Temuan | Dampak | Perbaikan |
++|---|---|---|---|
++| P0 | Frontend login menggunakan `response.json()` tanpa validasi Content-Type | HTML 404/500 Vercel muncul sebagai `Unexpected token` | `src/lib/http.ts`: response non-JSON ditangani dengan pesan error diagnostik; diterapkan ke admin/content/contact |
++| P0 | Root Directory Vercel sebelumnya menggunakan absolute Windows path | Tidak menemukan `package.json` saat build | Dokumentasi langkah Vercel `Root Directory ./`, bukan drive lokal; tidak dapat diubah dari file repo saja |
++| P0 | Server normal Node `.listen()` berbeda dengan Vercel Function | API bisa tidak terbentuk jika salah entrypoint | `api/index.ts` export default Express app tetap digunakan dan dijelaskan; rewrites `/api`/`/api/*` didahulukan |
++| P0 | File CMS lokal tidak persisten pada serverless | Gambar/teks hilang setelah deploy | `cms_sections`, `cms_sessions`, `cms-images` tetap di Supabase; validasi readiness |
++| P0 | Transport Supabase sebelumnya selalu mengisi `Authorization: Bearer` dari API key | `sb_secret_...` gagal sebagai JWT | Server mendukung `SUPABASE_SECRET_KEY` baru lewat header `apikey`; legacy JWT tetap didukung |
++| P1 | In-memory rate-limit login tidak berbagi state antar Vercel Function | Brute-force tidak dibatasi secara konsisten | Tabel `cms_login_attempts` dan RPC atomik `cms_record_login_failure` dalam SQL |
++| P1 | CMS Supabase error baru tampak setelah login; `/api/health` tidak mengecek DB | Deploy terlihat sehat padahal database rusak | Health membaca Supabase dan mengecek admin password hash, JSON 503 jika gagal |
++| P1 | Cookie `Secure` ditetapkan berdasarkan NODE_ENV | Login di mode produksi lokal via HTTP berpotensi gagal | Cookie `Secure` berdasarkan request HTTPS atau Vercel |
++| P1 | CMS menerima bentuk section yang salah dan menormalkan ke kosong | Bisa menghapus collection tidak sengaja | Cek array untuk collections dan object untuk sections lainnya, kembalikan JSON 400 |
++| P1 | Autosave bisa terus mengirim ulang jika server menormalisasi string | Request berulang dan status save tidak stabil | Sinkronisasi hasil normalisasi server ke state yang tidak berubah, simpan perubahan terbaru dalam-flight |
++| P1 | Syntax/body errors Express tidak diklasifikasi tepat | JSON invalid & payload besar dapat menjadi 500 | Middleware JSON 400/413, API 404 JSON, error 500 JSON |
++| P1 | Tidak ada CI/smoke test siap pakai | Kesalahan native Linux/route baru diketahui di produksi | Workflow GitHub Actions, test integration dan smoke command read-only |
++| P2 | requestAnimationFrame di beberapa komponen tidak dibersihkan ketika unmount | Potensi callback setelah halaman berubah | Cleanup RAF di MotionExperience & PartnerMarquee |
++| P2 | Dokumen sebelumnya menyebut lockfile tidak ada dan legacy key wajib | Setup/Debug membingungkan | `DEPLOY_PRODUCTION.md`, update README, setup guide |
++
++## Daftar endpoint dan kode status
++
++- `GET /api/health`: 200 JSON `{"status":"ok","storage":"supabase"}` (atau `local`); 503 JSON bila storage/config/password hash gagal.
++- `GET /api/content`: 200 JSON CMS; 503 JSON bila DB gagal.
++- `GET /api/admin/session`: 200 JSON bila autentik; 401 JSON jika belum login.
++- `POST /api/admin/login`: 200 JSON + httpOnly cookie; 401 invalid password; 403 cross-origin; 429 rate-limited; 503 untuk password hash hilang; middleware error berbentuk JSON.
++- `POST /api/admin/logout`: 200 JSON; 401/403 jika sesi/CSRF salah.
++- `PUT /api/admin/content/:section`: 200 JSON; 400 invalid data; 401/403 auth; 404 section tidak dikenal; 503 jika storage gagal.
++- `POST /api/admin/upload`: 201 JSON `{url,bytes}`; 400 file kosong; 401/403 auth; 413 body terlalu besar; 415 invalid image; 503 Storage gagal.
++- `POST /api/inquiries`: 200 JSON setelah email terkirim; 400 validasi; 403 cross-site; 415 non-JSON; 429 rate limit; 502 SMTP gagal; 503 SMTP belum diatur.
++- Unknown `/api/*`: 404 JSON. Platform-level error Vercel **sebelum Function berjalan** dapat mengembalikan HTML; frontend tidak lagi mem-parsingnya sebagai JSON.
++
++## Pengujian yang benar-benar dilakukan di lingkungan audit ini
++
++| Pemeriksaan | Hasil |
++|---|---|
++| TypeScript semua source: `tsc --noEmit --noUnusedLocals --noUnusedParameters` (compiler global TS 5.8.3) | PASS |
++| `node server/verify-package.mjs` | PASS |
++| `node --experimental-strip-types --test server/inquiries.test.mjs` (2 kasus) | PASS |
++| Tes parser HTTP (2 test, TypeScript transpile dengan global compiler lalu `node --test`) | PASS |
++| Pemindaian relative import, circular dependency (42 TypeScript modules) | 0 circular cycles ditemukan |
++| Validasi syntax scripts `.mjs` | PASS |
++| Validasi package-lock terhadap nama dan versi dependency package.json | PASS |
++| `npm ci` / `npm install` yang sepenuhnya bersih | BELUM BERHASIL: registry npm tidak bisa di-resolve dari lingkungan audit |
++| `npm run build` | BELUM BERHASIL: `node_modules` yang tersedia berasal dari Windows, TypeScript Linux native binding tidak tersedia |
++| `npm run dev` | BELUM BERHASIL: esbuild Windows binary tidak kompatibel di lingkungan Linux audit |
++| Tes Express+Sharp upload end-to-end di lingkungan audit | BELUM BERJALAN karena native dependencies di atas. Tests sudah disiapkan untuk Linux CI |
++| Vercel actual deploy, Supabase real CRUD, CMS login real, browser console dan jaringan di domain production | BELUM DIUJI: akses server, kredensial dan deployment belum tersedia |
++
++**Ini bukan jaminan deploy pasti sukses**, tetapi paket sudah dikoreksi secara statis, dengan CI yang memblokir build/test gagal di mesin Linux online. Jalankan `npm ci && npm test && npm run build` pada Node 22 dengan internet dan native package sesuai OS, lalu smoke test Vercel.
++
++## Audit tambahan dan risiko tersisa
++
++- Frontend relative API path `/api/...` tanpa hardcoded localhost untuk request produksi. `src/components` tetap bisa memakai external image URLs; gambar partner dari sumber pihak ketiga tidak dapat dijamin availability atau hak penggunaan.
++- Tidak ada CORS wildcard. API didesain same-origin dengan auth cookie, origin validation dan CSRF.
++- Semua konten HTML yang disimpan melalui CMS disanitasi di server memakai sanitize-html sebelum dirender.
++- Image upload diproses dengan Sharp dan dikonversi WebP, sementara UI mengoptimalkan sebelum dikirim untuk batas Vercel.
++- Inquiry form masih memakai per-instance Map rate limiting (proteksi ringan), bukan distributed rate-limiter. Untuk traffic publik tinggi atau abusive traffic, tambah WAF/Vercel Firewall atau Redis/Upstash distributed limiter dan CAPTCHA; jangan klaim rate-limit inquiry sudah global.
++- File gambar yang tidak direferensikan CMS tidak dihapus otomatis; perlu proses cleanup manual/terjadwal setelah backup supaya Storage tidak terus tumbuh.
++- Multi-editor CMS memakai last-write-wins per section, belum locking versi/optimistic concurrency.
++- `npm audit`, browser functional/E2E, external CDN URLs, Lighthouse, bundle size final, warning build dan deployment tidak dapat diverifikasi tanpa `npm ci` online dan akses produksi.
++- Preview yang memakai credentials Supabase production akan mengedit database live. Gunakan Preview env/project terpisah.
++
++## Langkah wajib pengguna
++
++1. Backup `.env`, foto CMS lama, `data/cms.json`, dan Supabase production jika sudah terisi.
++2. Ekstrak ZIP ke root repository yang digunakan Vercel. Jangan copy `node_modules` Windows; gunakan `npm ci` dari registry.
++3. Supabase SQL Editor: jalankan `supabase/schema.sql` **ulang** walaupun sudah ada schema sebelumnya.
++4. Tambahkan `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (sb_secret) atau legacy service_role JWT, `CMS_ADMIN_PASSWORD_HASH`, dan `PUBLIC_ORIGIN` di Vercel Production Environment.
++5. Migrasikan file lama sekali melalui `scripts/migrate-local-cms.mjs` bila belum dimigrasikan.
++6. Vercel → Settings → Build and Deployment → Root Directory `./` hanya jika `package.json` berada di root repo; Framework Vite, `npm run build`, `dist`.
++7. Push Git, pantau build dan Functions logs, jalankan `npm run test:smoke -- https://DOMAIN`, lalu uji login/save/upload dan redeploy secara manual.
++
++Untuk source code yang berubah secara **lengkap**, buka `SOURCE_CHANGES_COMPLETE.md` di paket ZIP. Untuk langkah deploy terperinci buka `DEPLOY_PRODUCTION.md`.
+--- /dev/null
++++ b/DEPLOY_PRODUCTION.md
+@@ -0,0 +1,100 @@
++# JuaraMetaCorp — Vercel + Supabase production deployment
++
++## Apa yang diperbaiki
++- Vite frontend remains static in `dist/`; `api/index.ts` exports the Express app as a Vercel Node.js Function. **Do not point Vercel at a Windows path.** `server/index.ts` is used only for local development / standalone Node and has `app.listen()`; it is NOT the Vercel Function.
++- `vercel.json` sends `/api` and `/api/*` to `/api/index` before the SPA fallback routes to `/index.html`. Vercel Functions preserve the original request URL for Express route matching. SPA routes `/admin`, `/about`, `/partners`, etc. remain accessible on refresh.
++- `/api/*` application responses have JSON Content-Type, including 404, malformed JSON 400, payload too large 413, auth 401/403, and service errors. **Platform-level failures before the Function runs can still be HTML**, so frontend now checks Content-Type before parsing.
++- CMS writes are stored in Supabase Postgres; images in public Supabase Storage; sessions and login limit are shared across instances. No writes to Vercel's ephemeral filesystem.
++- New `sb_secret_*` API keys can be used; legacy `service_role` JWTs are supported as a fallback. Never add secrets to `VITE_*` or commit `.env`.
++
++## 1. Repositori dan Vercel
++1. Extract the project ZIP into the **root of your GitHub repo** (same folder as `package.json`). Preserve `api/index.ts`, `server/`, `src/`, `public/`, `supabase/`, `package-lock.json` and `vercel.json`.
++2. Vercel project **Settings → Build and Deployment**: Framework Preset **Vite**, Root Directory **`./`** (repository root containing `package.json`), Install Command **`npm ci`** (or default `npm install`), Build Command **`npm run build`**, Output Directory **`dist`**. **Never** enter `D:\...` as Root Directory.
++3. In project **Settings → General**, set Node.js version to **22.x** if available; `package.json` also specifies Node 22.
++4. Keep `vercel.json` from this package. `api/index.ts` must exist and export the Express `app` as default. Do not use a rewrite that sends `/api/*` to `/index.html`.
++
++## 2. Supabase (before deploying CMS)
++1. Create a Supabase project, SQL Editor → run `supabase/schema.sql` in full. Re-run on existing Supabase projects to create the new rate limiter schema.
++2. In Supabase Project Settings → API Keys, copy **Secret key** (`sb_secret_...`, recommended) or **Legacy service_role** JWT. Do NOT use publishable or anon key. Store only in Vercel server Environment Variables:
++
++   ```dotenv
++   SUPABASE_URL=https://YOUR_PROJECT.supabase.co
++   SUPABASE_SECRET_KEY=sb_secret_YOUR_SECRET
++   CMS_ADMIN_PASSWORD_HASH=scrypt$...$...
++   PUBLIC_ORIGIN=https://yourdomain.com
++   ```
++
++   For a legacy project, use `SUPABASE_SERVICE_ROLE_KEY` *instead of* `SUPABASE_SECRET_KEY`. `PUBLIC_ORIGIN` must match the actual browser origin for login/saves. On preview domains, either omit `PUBLIC_ORIGIN` in Preview env or use separate Preview settings; don't allow arbitrary origins.
++3. Generate the CMS password hash locally with `npm run cms:setup`; copy **only** `CMS_ADMIN_PASSWORD_HASH` (not the plaintext password) from local `.env` to Vercel Environment Variables. Set variables for the Production environment; Preview if needed.
++4. If using contact form email, set server-only `SMTP_USER` and `SMTP_APP_PASSWORD`. Without SMTP, `POST /api/inquiries` reports 503 JSON, not a silent success.
++5. Before migration, take a backup of old `data/cms.json`, `data/uploads`, and current Supabase database if already used. Then run one-time migration **from the project folder that contains the old data**:
++
++   ```bash
++   # Windows PowerShell after adding values to .env
++   node --env-file=.env scripts/migrate-local-cms.mjs
++   ```
++
++   The script refuses to overwrite existing Supabase CMS rows unless explicitly invoked with `--force` (which is risky). Confirm migrated images resolve via public Supabase Storage URLs. `data/cms.json` and uploaded files are excluded from Git intentionally.
++
++## 3. Tests before pushing
++
++```bash
++node --version    # use Node 22.x
++npm ci            # clean cross-platform install
++npm run typecheck
++npm test
++npm run build     # generates dist/ and server-dist/
++npm run dev       # local http://localhost:3000 (Vite and Express)
++```
++
++A Windows `node_modules` directory MUST NOT be copied to Linux or committed. Vercel installs Linux-native `sharp`, `esbuild`, and Rollup binaries with `npm ci`.
++
++`npm run preview` serves only Vite's static assets and **does not run CMS API**. To test the built site with Node locally, use `npm start` (on `http://localhost:3000`).
++
++## 4. Deploy and verify
++
++```bash
++git add .
++git commit -m "Fix Vercel CMS routing and Supabase persistence"
++git push
++```
++
++Vercel will deploy from its connected Git branch. Check deployment **Build Logs** and **Functions**. After the status is **Ready**:
++
++```bash
++npm run test:smoke -- https://YOUR-VERCEL-DOMAIN.vercel.app
++```
++
++This read-only smoke test checks `/api/health`, `/api/content`, a 404 route, `/api/admin/session`, and SPA deep routes. **Then manually open `/admin`**, login, edit a text, upload an image, save, reload, and redeploy. The uploaded image and updated text must remain. Follow browser Network tab for JSON Content-Type. Use Vercel Function Logs for Supabase errors.
++
++## 5. Common failure diagnosis
++
++| Symptom | Likely problem | Fix |
++|---|---|---|
++| Vercel looks for `D:\...\package.json` | Root Directory misconfigured | Set Vercel Root Directory to repository root `./` |
++| `API ... returned non-JSON` | Vercel platform returned HTML (Function missing/crashed/rewrite) | Check Vercel build, Functions and `api/index.ts`, then `vercel.json` |
++| `/api/health` 503 JSON | Supabase credentials/schema or admin hash missing | Run SQL schema, validate env, redeploy |
++| `/api/content` 503 JSON | Supabase query failed | Check Supabase database, key and Vercel Function Logs |
++| Login 401 JSON | Wrong admin password | Generate correct `CMS_ADMIN_PASSWORD_HASH` and deploy |
++| Login 403 JSON | Origin mismatch | Check `PUBLIC_ORIGIN` and domain/preview env |
++| Login 429 JSON | Shared login limiter triggered | Wait 15 minutes; don't brute force |
++| Upload 413 | Request too large at Vercel edge | Frontend auto-compresses; retry after resizing |
++| Upload 503 JSON | Storage permission/bucket error | Run SQL and verify `cms-images` bucket |
++| Preview works but live domain fails | Environment variables scoped only to Preview | Add Production env values and redeploy |
++| UI shows old content | data migration not executed, or stale tabs | Check `/api/content`, Supabase rows and reload |
++
++## 6. Operations/security
++
++- Never expose `SUPABASE_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, or `CMS_ADMIN_PASSWORD_HASH` to frontend/browser. Do not set `VITE_` variables for secrets.
++- Only images are publicly readable. CMS JSON and session tables are protected by RLS and server-only keys.
++- Use secure HTTPS on Vercel; CMS uses httpOnly SameSite=Strict session cookies + CSRF, origin validation, and shared login rate limits.
++- If you deploy multiple custom domains, designate ONE admin origin or configure the allowed origin for your admin domain. `PUBLIC_ORIGIN` must be an exact scheme + host match.
++- Back up Supabase Postgres and Storage periodically. Deleting an image file deliberately requires separate cleanup logic, not included here (to avoid deleting images still referenced by content).
++- The project uses `npm ci` and GitHub Actions to catch build/test errors on Linux. Actual Vercel success and Supabase CRUD still require live project credentials.
++
++Official references:
++- https://vercel.com/docs/frameworks/frontend/vite
++- https://vercel.com/docs/frameworks/backend/express
++- https://vercel.com/docs/project-configuration/vercel-json
++- https://supabase.com/docs/guides/getting-started/api-keys
++- https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys
+--- /dev/null
++++ b/scripts/smoke-production.mjs
+@@ -0,0 +1,28 @@
++/** Read-only verification of a deployed Vercel website: npm run test:smoke -- https://your-domain */
++const raw = process.argv[2] || process.env.SMOKE_BASE_URL;
++if (!raw || !/^https?:\/\//.test(raw)) {
++ console.error('Usage: npm run test:smoke -- https://YOUR-VERCEL-URL'); process.exit(2);
++}
++const base = raw.replace(/\/+$/, '');
++let problems = 0;
++async function check(p, expectedCode, expectedType, inspect) {
++ try {
++  const response = await fetch(base + p, {redirect:'manual',signal:AbortSignal.timeout(15000)});
++  const type=response.headers.get('content-type')||'';
++  const passed=response.status===expectedCode && type.includes(expectedType);
++  const content=type.includes('application/json') ? await response.json() : await response.text();
++  const valid=passed && (!inspect || inspect(content));
++  console.log(`${valid?'PASS':'FAIL'} ${p} → ${response.status} ${type}`);
++  if(!valid)problems++;
++ }catch(e){console.error(`FAIL ${p}: ${e instanceof Error ? e.message : 'request failed'}`);problems++}
++}
++await check('/api/health',200,'application/json',data=>data?.status==='ok');
++await check('/api/content',200,'application/json',data=>!!data?.hero && Array.isArray(data?.products));
++await check('/api/does-not-exist',404,'application/json',data=>typeof data?.message==='string');
++await check('/api/admin/session',401,'application/json',data=>data?.authenticated===false);
++await check('/admin',200,'text/html');
++await check('/about',200,'text/html');
++await check('/product',200,'text/html');
++await check('/contact',200,'text/html');
++if(problems){console.error(`${problems} smoke tests failed. Check Vercel logs, env and Supabase schema.`);process.exitCode=1;}
++else console.log('Smoke tests passed. Next verify login, save and upload manually in /admin.');
+--- /dev/null
++++ b/server/api.test.ts
+@@ -0,0 +1,86 @@
++/** Run with npm run test:api. Real HTTP tests, with file-backed CMS and local storage. */
++import assert from 'node:assert/strict';
++import { after, before, test } from 'node:test';
++import crypto from 'node:crypto';
++import fs from 'node:fs/promises';
++import os from 'node:os';
++import path from 'node:path';
++import sharp from 'sharp';
++import type { Server } from 'node:http';
++
++let server: Server;
++let base = '';
++let workDir = '';
++const PASSWORD = 'a-strong-testing-password-only';
++before(async () => {
++  workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'jmc-cms-test-'));
++  const salt = crypto.randomBytes(16);
++  const digest = crypto.scryptSync(PASSWORD, salt, 64);
++  process.env.CMS_DATA_DIR = workDir;
++  process.env.CMS_ADMIN_PASSWORD_HASH = `scrypt$${salt.toString('hex')}$${digest.toString('hex')}`;
++  delete process.env.VERCEL;
++  delete process.env.CMS_STORAGE;
++  delete process.env.PUBLIC_ORIGIN;
++  const { default: app } = await import('./app');
++  server = app.listen(0, '127.0.0.1');
++  await new Promise<void>(resolve => server.once('listening', resolve));
++  const address = server.address();
++  assert.ok(address && typeof address !== 'string');
++  base = `http://127.0.0.1:${address.port}`;
++});
++after(async () => {
++  if (server) await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
++  if (workDir) await fs.rm(workDir, { recursive: true, force: true });
++});
++async function json(pathname: string, init: RequestInit = {}) {
++  const response = await fetch(base + pathname, init);
++  assert.match(response.headers.get('content-type') || '', /application\/json/);
++  return { response, data: await response.json() as Record<string, unknown> };
++}
++
++test('health, content, API 404, malformed body, session without cookie all return JSON', async () => {
++  const health = await json('/api/health');
++  assert.equal(health.response.status, 200); assert.equal(health.data.status, 'ok');
++  const content = await json('/api/content');
++  assert.equal(content.response.status, 200); assert.ok(content.data.hero);
++  const missing = await json('/api/does-not-exist');
++  assert.equal(missing.response.status, 404);
++  const noSession = await json('/api/admin/session');
++  assert.equal(noSession.response.status, 401);
++  const malformed = await json('/api/admin/login', {method: 'POST', headers: {'Content-Type':'application/json'}, body:'{broken'});
++  assert.equal(malformed.response.status, 400);
++});
++
++test('admin login, CSRF, CRUD and image upload persist on disk', async () => {
++  const login = await json('/api/admin/login', {
++    method: 'POST', headers: {'Content-Type':'application/json', Origin:base}, body:JSON.stringify({password:PASSWORD}),
++  });
++  assert.equal(login.response.status, 200);
++  assert.equal(login.data.authenticated, true);
++  const csrf = login.data.csrfToken as string;
++  const cookie = login.response.headers.get('set-cookie')?.split(';')[0];
++  assert.ok(cookie);
++  const session = await json('/api/admin/session', {headers:{Cookie:cookie}});
++  assert.equal(session.data.authenticated,true);
++  const bad = await json('/api/admin/content/hero',{method:'PUT',headers:{Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify({value:{headline:'Changed'}})});
++  assert.equal(bad.response.status,403);
++  const saved = await json('/api/admin/content/hero', {
++    method:'PUT', headers:{Cookie:cookie,'X-CMS-CSRF':csrf,'Content-Type':'application/json',Origin:base},
++    body:JSON.stringify({value:{headline:'Test headline'}}),
++  });
++  assert.equal(saved.response.status,200);
++  const afterSave = await json('/api/content');
++  assert.equal((afterSave.data.hero as {headline:string}).headline,'Test headline');
++  const image=await sharp({create:{width:16,height:16,channels:4,background:'#445566'}}).png().toBuffer();
++  const upload=await json('/api/admin/upload', {
++    method:'POST',headers:{Cookie:cookie,'X-CMS-CSRF':csrf,'Content-Type':'image/png',Origin:base},body:new Uint8Array(image),
++  });
++  assert.equal(upload.response.status,201);
++  assert.match(String(upload.data.url), /^\/uploads\/[\w-]+\.webp$/);
++  const file=await fetch(base+upload.data.url);
++  assert.equal(file.status,200);
++  assert.match(file.headers.get('content-type') || '',/image\/webp/);
++  await file.arrayBuffer();
++  const logout=await json('/api/admin/logout', {method:'POST',headers:{Cookie:cookie,'X-CMS-CSRF':csrf,Origin:base}});
++  assert.equal(logout.response.status,200);
++});
+--- /dev/null
++++ b/src/lib/http.test.ts
+@@ -0,0 +1,31 @@
++import assert from 'node:assert/strict';
++import { test } from 'node:test';
++import { ApiError, requestJson } from './http';
++
++// Node test environment supplies fetch, while this transport intentionally uses browser timers.
++(globalThis as any).window = globalThis;
++test('frontend JSON parser detects HTML response without throwing Unexpected token', async () => {
++  const previous = globalThis.fetch;
++  globalThis.fetch = async () => new Response('<html>A server error</html>', {
++    status: 500, headers: {'content-type':'text/html; charset=utf-8'},
++  });
++  try {
++    await assert.rejects(requestJson('/api/admin/login'), (error: unknown) =>
++      error instanceof ApiError && error.status === 500 && /non-JSON/.test(error.message));
++  } finally { globalThis.fetch = previous; }
++});
++
++test('frontend JSON parser handles successful and failed JSON responses', async () => {
++  const original = globalThis.fetch;
++  globalThis.fetch = async () => new Response('{"status":"ok"}', {
++    status: 200, headers: {'content-type':'application/json'},
++  });
++  try { assert.deepEqual(await requestJson('/api/health'), {status:'ok'}); }
++  finally { globalThis.fetch = original; }
++  globalThis.fetch = async () => new Response('{"message":"Login failed"}', {
++    status: 401, headers: {'content-type':'application/json'},
++  });
++  try { await assert.rejects(requestJson('/api/admin/login'), (error:unknown) =>
++    error instanceof ApiError && error.status === 401 && error.message === 'Login failed'); }
++  finally { globalThis.fetch = original; }
++});
+--- /dev/null
++++ b/src/lib/http.ts
+@@ -0,0 +1,42 @@
++/** Single JSON transport for the same-origin API. Never parse a Vercel HTML error as JSON. */
++export class ApiError extends Error {
++  constructor(message: string, public readonly status: number) { super(message); this.name = 'ApiError'; }
++}
++
++export async function requestJson<T>(path: `/api/${string}`, options: RequestInit = {}): Promise<T> {
++  const controller = new AbortController();
++  const timeout = window.setTimeout(() => controller.abort(), 30_000);
++  const abort = () => controller.abort();
++  options.signal?.addEventListener('abort', abort, { once: true });
++  try {
++    const response = await fetch(path, {
++      credentials: 'same-origin', cache: 'no-store', ...options, signal: controller.signal,
++    });
++    const contentType = response.headers.get('content-type') || '';
++    if (!/\bapplication\/(?:[a-z0-9.+-]*\+)?json\b/i.test(contentType)) {
++      throw new ApiError(
++        `API ${path} returned a non-JSON response (HTTP ${response.status}). Check Vercel Functions, rewrites and deployment logs.`,
++        response.status,
++      );
++    }
++    let body: unknown;
++    try { body = await response.json(); }
++    catch { throw new ApiError(`API ${path} returned malformed JSON (HTTP ${response.status}).`, response.status); }
++    if (!response.ok) {
++      const detail = body && typeof body === 'object' && 'message' in body && typeof body.message === 'string'
++        ? body.message : `API request failed (HTTP ${response.status}).`;
++      throw new ApiError(detail, response.status);
++    }
++    return body as T;
++  } catch (error) {
++    if (controller.signal.aborted && !options.signal?.aborted) {
++      throw new ApiError(`API ${path} timed out. Please try again.`, 0);
++    }
++    if (error instanceof ApiError) throw error;
++    if (error instanceof TypeError) throw new ApiError(`Cannot reach API ${path}. Check your connection and Vercel deployment.`, 0);
++    throw error;
++  } finally {
++    window.clearTimeout(timeout);
++    options.signal?.removeEventListener('abort', abort);
++  }
++}

@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent, type MouseEvent } from 'react';
+import { useEffect, useRef, type PointerEvent, type MouseEvent } from 'react';
 import { ArrowUpRight, BriefcaseBusiness, GraduationCap, Landmark, School } from 'lucide-react';
 import { useContent } from '../cms/ContentContext';
 import type { Partner } from '../cms/schema';
@@ -49,6 +49,7 @@ export default function PartnerMarquee() {
   const dragRef = useRef<DragSession | null>(null);
   const suppressClickRef = useRef(false);
   const rafRef = useRef<number | null>(null);
+  useEffect(() => () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); }, []);
 
   function pointerDown(e: PointerEvent<HTMLDivElement>) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;

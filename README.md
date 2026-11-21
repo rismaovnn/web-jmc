@@ -1,6 +1,6 @@
 # JuaraMetaCorp Website + CMS v2.0
 
-**New:** Secure `/admin` dashboard for Hero, About, Products, Partners, Leadership, Contact and Footer. See **[CMS_SETUP_GUIDE.md](CMS_SETUP_GUIDE.md)** before updating your current website. Keep your existing `.env` (Gmail SMTP credentials) and back up your custom images before copying source files. This edition remains React + Vite + Express with JSON persistence instead of moving to Next.js. The `preview.html` is a legacy static mockup; use `npm run dev` to view the actual CMS-powered website.
+**New:** Secure `/admin` dashboard for Hero, About, Products, Partners, Leadership, Contact and Footer. See **[CMS_SETUP_GUIDE.md](CMS_SETUP_GUIDE.md)** before updating your current website. Keep your existing `.env` (Gmail SMTP credentials) and back up your custom images before copying source files. This edition remains React + Vite + Express. Local CMS can use file persistence; Vercel CMS uses Supabase Postgres and Storage. See `DEPLOY_PRODUCTION.md`. The `preview.html` is a legacy static mockup; use `npm run dev` to view the actual CMS-powered website.
 
 ---
 
@@ -55,7 +55,7 @@ The logo images retain their pre-existing public-source URLs and fall back to vi
 
 **Never share your App Password in chat, push `.env` to Git, or use a `VITE_` prefix for email credentials.** An App Password usually requires Google 2-Step Verification.
 
-This ZIP intentionally omits a stale `package-lock.json` because npm's registry could not be reached during packaging. Run `npm install` once on your own computer to generate a synchronized lockfile. After this, `npm ci` is available for reproducible future installs.
+This ZIP **includes** `package-lock.json`. Use `npm ci` for reproducible installs; never commit Windows `node_modules` to a Linux Vercel deployment. GitHub Actions runs `npm ci`, tests and build on Linux.
 
 ## Build and deploy
 
@@ -117,4 +117,4 @@ See [PROJECT_LIVE_LINKS_GUIDE.md](PROJECT_LIVE_LINKS_GUIDE.md) to change which G
 
 ## Deployment ke Vercel + Supabase (CMS persisten)
 
-**PENTING:** Untuk Vercel, ikuti **`VERCEL_SUPABASE_SETUP.md`** terlebih dahulu. Dokumentasi `CMS_SETUP_GUIDE.md` mendeskripsikan mode lokal/hosting persistent disk; Vercel menggunakan Supabase Database dan Storage sebagai penyimpanan permanen. Sebelum upgrade dari versi lama, migrasikan `data/cms.json` dan `data/uploads` memakai `scripts/migrate-local-cms.mjs`.
+**PENTING:** Untuk Vercel, ikuti **`DEPLOY_PRODUCTION.md`** (ringkasan: `VERCEL_SUPABASE_SETUP.md`) terlebih dahulu. Dokumentasi `CMS_SETUP_GUIDE.md` mendeskripsikan mode lokal/hosting persistent disk; Vercel menggunakan Supabase Database dan Storage sebagai penyimpanan permanen. Sebelum upgrade dari versi lama, migrasikan `data/cms.json` dan `data/uploads` memakai `scripts/migrate-local-cms.mjs`.

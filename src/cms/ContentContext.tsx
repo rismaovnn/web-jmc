@@ -1,13 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { defaultContent } from './defaultContent';
 import type { CMSContent } from './schema';
+import { requestJson } from '../lib/http';
 const ContentContext = createContext<CMSContent>(defaultContent);
 export const useContent = () => useContext(ContentContext);
 export function ContentProvider({children}:{children:ReactNode}) {
   const [content,setContent] = useState<CMSContent>(defaultContent);
   useEffect(()=>{
     let alive = true;
-    const refresh=()=>fetch('/api/content',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(data=>{if(alive)setContent(data)}).catch(()=>{});
+    const refresh=()=>requestJson<CMSContent>('/api/content').then(data=>{if(alive)setContent(data)}).catch(()=>{/* Leave last known/default content visible if API is temporarily down. */});
     refresh();
     const t=window.setInterval(refresh,30000);
     window.addEventListener('focus',refresh);

@@ -6,15 +6,15 @@ import 'node:process';
 import { readFile } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
 const url = process.env.SUPABASE_URL?.trim().replace(/\/+$/, '');
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+const serviceKey = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
 if (!url || !serviceKey || !/^https:\/\//.test(url)) {
- console.error('Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY. Load .env with: node --env-file=.env scripts/migrate-local-cms.mjs');
+ console.error('Missing SUPABASE_URL / SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY). Load .env with: node --env-file=.env scripts/migrate-local-cms.mjs');
  process.exit(1);
 }
 const sections=['hero','about','products','partners','leadership','contact','footer'];
 const http = async (route, method, body, extra={}) => {
  const resp = await fetch(`${url}${route}`, {
-  method, headers:{apikey:serviceKey,Authorization:`Bearer ${serviceKey}`,Accept:'application/json',...extra},
+  method, headers:{apikey:serviceKey,...(!serviceKey.startsWith('sb_secret_')?{Authorization:`Bearer ${serviceKey}`}:{}) ,Accept:'application/json',...extra},
   ...(body===undefined?{}:{body}), signal:AbortSignal.timeout(30000),
  });
  if (!resp.ok) { const msg=await resp.text(); throw Error(`Supabase ${method} ${route.split('?')[0]}: HTTP ${resp.status} (${msg.slice(0,180)})`); }
@@ -58,4 +58,4 @@ await http('/rest/v1/cms_sections?on_conflict=section','POST',body,{
  'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal',
 });
 console.log('Migration complete! Images:',memo.size,'Sections:',sections.filter(s=>s in original).length);
-console.log('Now set CMS_STORAGE=supabase in local .env and SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in Vercel.');
+console.log('Now set CMS_STORAGE=supabase in local .env and SUPABASE_URL / SUPABASE_SECRET_KEY in Vercel.');

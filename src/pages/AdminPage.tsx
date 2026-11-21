@@ -3,6 +3,7 @@ import { ArrowLeft, Check, ChevronDown, ExternalLink, GripVertical, ImagePlus, L
 import { Link } from 'react-router-dom';
 import { defaultContent } from '../cms/defaultContent';
 import type { CMSContent, SectionKey } from '../cms/schema';
+import { ApiError, requestJson } from '../lib/http';
 import '../cms/admin.css';
 const tabs: {key:SectionKey;label:string;icon:string}[]=[
  {key:'hero',label:'Hero Section',icon:'✦'}, {key:'about',label:'About & Mission',icon:'◎'},
@@ -10,7 +11,7 @@ const tabs: {key:SectionKey;label:string;icon:string}[]=[
  {key:'leadership',label:'Leadership',icon:'♟'},{key:'contact',label:'Contact',icon:'✉'},
  {key:'footer',label:'Footer',icon:'▤'}
 ];
-const api=(path:string,init?:RequestInit)=>fetch('/api/admin'+path,{credentials:'same-origin',...init});
+const api=<T,>(path:string,init?:RequestInit)=>requestJson<T>(`/api/admin${path}`,init);
 const uniqueId=()=>`cms-${crypto.randomUUID()}`;
 function Field({label,value,onChange,placeholder='',multiline=false,type='text'}:{label:string;value:string;onChange:(v:string)=>void;placeholder?:string;multiline?:boolean;type?:string}){
  return <label className="cms-field"><span>{label}</span>{multiline?<textarea rows={4} value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>:<input type={type} value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>}</label>;
@@ -49,8 +50,8 @@ function Upload({label,value,onChange,csrf}:{label:string;value:string;onChange:
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  async function upload(file:File){if(!file)return;if(file.size>8*1024*1024){setError('Maximum image size: 8 MB');return;}setBusy(true);setError('');try{
  const prepared=await prepareImageForVercel(file);
- const response=await api('/upload',{method:'POST',headers:{'Content-Type':prepared.type,'X-CMS-CSRF':csrf},body:prepared});
- const result=await response.json();if(!response.ok)throw new Error(result.message||'Upload failed');onChange(result.url);
+ const result=await api<{url:string;bytes:number}>('/upload',{method:'POST',headers:{'Content-Type':prepared.type,'X-CMS-CSRF':csrf},body:prepared});
+ onChange(result.url);
  }catch(err){setError(err instanceof Error?err.message:'Upload failed');}finally{setBusy(false)}}
  return <div className="cms-field cms-upload"><span>{label}</span><div className="cms-upload-layout"><div className="cms-upload-preview">{value?<img src={value} alt="Uploaded image preview" onError={e=>{e.currentTarget.style.opacity='.1'}}/>:<ImagePlus size={27}/>}</div><div className="cms-upload-actions"><label className="cms-btn cms-btn-subtle cms-file-label">{busy?<LoaderCircle size={16} className="cms-spin"/>:<ImagePlus size={16}/>} {busy?'Optimizing…':'Upload image'}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(file);e.target.value=''}}/></label><small>JPG, PNG, WebP, AVIF • Up to 8 MB • Auto-optimized before upload</small></div></div>
  <input value={value||''} onChange={e=>onChange(e.target.value)} placeholder="Or enter an existing image URL /images/..." aria-label={`${label} URL`}/>{error&&<small role="alert" className="cms-error">{error}</small>}</div>;
@@ -80,19 +81,65 @@ export default function AdminPage(){
  const [password,setPassword]=useState(''),[csrf,setCsrf]=useState(''),[initializing,setInitializing]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [section,setSection]=useState<SectionKey>('hero'),[content,setContent]=useState<CMSContent>(defaultContent),[saved,setSaved]=useState<CMSContent>(defaultContent),[status,setStatus]=useState('All changes saved');
  const [mobileNav,setMobileNav]=useState(false);
- async function load(){try{const r=await fetch('/api/content',{cache:'no-store'});if(!r.ok)throw Error('Could not load website content');const c=await r.json() as CMSContent;setContent(c);setSaved(c)}catch(e){setError(e instanceof Error?e.message:'Content unavailable')}}
- useEffect(()=>{let active=true;api('/session').then(async r=>{const data=await r.json();if(active&&r.ok){setCsrf(data.csrfToken);await load()}}).catch(()=>{}).finally(()=>{if(active)setInitializing(false)});return ()=>{active=false}},[]);
- async function signIn(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{const response=await api('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});const data=await response.json();if(!response.ok)throw Error(data.message||'Login failed');setCsrf(data.csrfToken);setPassword('');await load()}catch(e){setError(e instanceof Error?e.message:'Login failed')}finally{setBusy(false)}}
- async function logout(){await api('/logout',{method:'POST',headers:{'X-CMS-CSRF':csrf}}).catch(()=>{});setCsrf('');setContent(defaultContent)}
+ async function load(){
+  try {const c=await requestJson<CMSContent>('/api/content');setContent(c);setSaved(c);setError('');}
+  catch(e){setError(e instanceof Error?e.message:'Content unavailable');}
+ }
+ useEffect(()=>{
+  let active=true;
+  api<{authenticated:boolean;csrfToken:string}>('/session').then(async data=>{
+   if(active && data.authenticated){setCsrf(data.csrfToken);await load();}
+  }).catch(e=>{
+   if(active && !(e instanceof ApiError && e.status===401)) setError(e instanceof Error?e.message:'Unable to reach CMS API.');
+  }).finally(()=>{if(active)setInitializing(false)});
+  return ()=>{active=false};
+ },[]);
+ async function signIn(e:FormEvent){
+  e.preventDefault();setBusy(true);setError('');
+  try {
+   const data=await api<{authenticated:boolean;csrfToken:string}>('/login',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})
+   });
+   setCsrf(data.csrfToken);setPassword('');await load();
+  }catch(e){setError(e instanceof Error?e.message:'Login failed')}
+  finally{setBusy(false)}
+ }
+ async function logout(){
+  try {await api<{success:boolean}>('/logout',{method:'POST',headers:{'X-CMS-CSRF':csrf}});setCsrf('');setContent(defaultContent);}
+  catch(e){setError(e instanceof Error?e.message:'Logout failed')}
+ }
  const pending=useMemo(()=>tabs.filter(({key})=>JSON.stringify(content[key])!==JSON.stringify(saved[key])).map(t=>t.key),[content,saved]);
  const saving=useRef(new Set<SectionKey>());
+ const latest=useRef(content);
+ latest.current=content;
  async function saveOne(key:SectionKey,value:CMSContent[SectionKey]){
-  if(saving.current.has(key))return; saving.current.add(key);setStatus('Saving changes…');
-  try{const r=await api(`/content/${key}`,{method:'PUT',headers:{'Content-Type':'application/json','X-CMS-CSRF':csrf},body:JSON.stringify({value})});const data=await r.json();if(!r.ok)throw Error(data.message||'Save failed');
-   setSaved(old=>({...old,[key]:value}));setStatus('Saved successfully');setError('');
-  }catch(e){setError(e instanceof Error?e.message:'Save failed');setStatus('Save failed')}finally{saving.current.delete(key)}
+  if(saving.current.has(key))return;
+  saving.current.add(key);setStatus('Saving changes…');
+  let success=false;
+  try {
+   const result=await api<{saved:boolean;value:CMSContent[SectionKey]}>(`/content/${key}`,{
+    method:'PUT',headers:{'Content-Type':'application/json','X-CMS-CSRF':csrf},body:JSON.stringify({value})
+   });
+   setSaved(old=>({...old,[key]:result.value}));
+   // Keep the canonical server value in sync when the user has not typed again.
+   setContent(old=>JSON.stringify(old[key])===JSON.stringify(value)?{...old,[key]:result.value}:old);
+   setStatus('Saved successfully');setError('');success=true;
+  }catch(e){setError(e instanceof Error?e.message:'Save failed');setStatus('Save failed')}
+  finally{
+   saving.current.delete(key);
+   // A user may have typed while the previous save was in flight: persist the latest snapshot.
+   if(success && JSON.stringify(latest.current[key])!==JSON.stringify(value)) {
+    window.setTimeout(()=>void saveOne(key,latest.current[key]),300);
+   }
+  }
  }
- useEffect(()=>{if(!csrf||!pending.length)return;const timeout=window.setTimeout(()=>{for(const key of pending){if(!saving.current.has(key))void saveOne(key,content[key])}},1200);return ()=>window.clearTimeout(timeout)},[content,saved,csrf,pending.join(',')]);
+ useEffect(()=>{
+  if(!csrf||!pending.length)return;
+  const timeout=window.setTimeout(()=>{
+   for(const key of pending) if(!saving.current.has(key)) void saveOne(key,content[key]);
+  },1200);
+  return ()=>window.clearTimeout(timeout);
+ },[content,saved,csrf,pending.join(',')]);
  async function saveAll(){for(const key of pending)await saveOne(key,content[key]);}
  function changeSection(value:CMSContent[SectionKey]){setContent(old=>({...old,[section]:value}));setStatus('Unsaved changes…')}
  if(initializing)return <div className="cms-app cms-center"><LoaderCircle className="cms-spin"/> Checking administrator session…</div>;

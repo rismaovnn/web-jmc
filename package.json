@@ -5,15 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server/index.ts",
-    "build": "vite build && npm run build:server",
+    "build": "npm run typecheck && vite build && npm run build:server",
     "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --packages=external --target=node22 --outfile=server-dist/index.mjs",
     "start": "node -e \"process.env.NODE_ENV='production'; import('./server-dist/index.mjs')\"",
     "preview": "vite preview",
-    "lint": "tsc --noEmit",
-    "test:api": "node --experimental-strip-types --test server/inquiries.test.mjs",
+    "lint": "npm run typecheck",
+    "test:api": "tsx --test server/api.test.ts server/inquiries.test.mjs",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('server-dist',{recursive:true,force:true})\"",
     "cms:setup": "node server/setup-admin.mjs",
-    "cms:check": "node server/verify-package.mjs"
+    "cms:check": "node server/verify-package.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:smoke": "node scripts/smoke-production.mjs",
+    "test:unit": "tsx --test src/lib/http.test.ts",
+    "test": "npm run typecheck && npm run test:api && npm run test:unit"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -45,5 +49,8 @@
     "tsx": "^4.21.0",
     "typescript": "^7.0.2",
     "@types/sanitize-html": "^2.16.0"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

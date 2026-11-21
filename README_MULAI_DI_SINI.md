@@ -51,9 +51,13 @@
 - Premium Hero, Services, Our Products, Partners Marquee, About + Vision/Mission, Leadership, Contact, Footer.
 - Tiga project awal: Rumah Adat Lampung 360 (Google Drive), MetaSchool SMKN 4 Bandar Lampung, dan SMK Al Kautsar (Roblox).
 - Empat partner tetap tersedia: PT Bukit Asam, SMKN 4 Bandar Lampung, STKIP PGRI Bandar Lampung, Universitas Teknokrat Indonesia.
-- CMS aman berbasis file JSON, login password scrypt, session cookie httpOnly, CSRF, upload gambar WebP, dan autosave.
+- CMS aman dengan Supabase Database/Storage di Vercel (mode file JSON hanya untuk lokal), login password scrypt, cookie httpOnly, CSRF, upload WebP, dan autosave.
 - Contact API melalui Gmail SMTP (kredensial hanya di `.env` pada server).
 
 **Penting untuk hosting:** CMS file-based perlu penyimpanan permanen (`data/`) dan satu proses Node.js; untuk deployment serverless gunakan database/object storage.
 
 Baca juga `CMS_SETUP_GUIDE.md`, `CONTACT_SETUP.md`, dan `PROJECT_LIVE_LINKS_GUIDE.md` untuk rincian teknis.
+
+## Deploy Vercel (penting)
+
+Untuk Vercel **jangan** mengandalkan `data/uploads/` atau `data/cms.json`. Gunakan Supabase Database/Storage. Panduan baru ada di **`DEPLOY_PRODUCTION.md`**. Setting Root Directory Vercel adalah repository root `./`, **bukan** path Windows.

@@ -1,14 +1,15 @@
-/** JuaraMetaCorp — server-owned inquiry API. Secrets never enter the Vite client bundle. */
+/** Express API shared between local Node and the Vercel Node.js Function. */
 import 'dotenv/config';
-import express, { type NextFunction, type Request, type Response } from 'express';
+import express, { type ErrorRequestHandler, type NextFunction, type Request, type Response } from 'express';
 import nodemailer from 'nodemailer';
 import { validateInquiry } from './validation';
 import { cmsRouter, cmsPublic, uploadsRouter, readContent } from './cms';
+import { getSections, useSupabase, validateSupabaseConfig } from './supabase';
 
 const app = express();
 const defaultDestination = 'juarametacorp@gmail.com';
-// Configure TRUST_PROXY_HOPS (typically 1) only when deployed behind a trusted proxy.
-app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 0));
+// Vercel supplies the trusted edge proxy. On other infrastructure, default to zero.
+app.set('trust proxy', process.env.VERCEL === '1' ? 1 : Number(process.env.TRUST_PROXY_HOPS || 0));
 app.disable('x-powered-by');
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -16,77 +17,58 @@ app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   next();
 });
+// No wildcard CORS: frontend & CMS use the same Vercel origin.
+app.use('/api', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
 app.use('/api', express.json({ limit: '256kb', type: 'application/json' }));
-// CMS APIs and persisted uploads run before the SPA/Vite fallback.
 app.get('/api/content', cmsPublic);
 app.use('/api/admin', cmsRouter);
 app.use('/uploads', uploadsRouter);
 
-// Lightweight per-IP protection. In multi-instance production use a shared rate-limit store.
-const requestsByIp = new Map<string, { count: number; resetAt: number }>();
-const intervalMs = 15 * 60_000;
-const allowedAttempts = 5;
-function rateLimit(req: Request, res: Response, next: NextFunction) {
+// Per-instance inquiry limiter, supplemental to spam honeypot; for high volume use a shared store.
+const attempts = new Map<string, { count: number; resetAt: number }>();
+function inquiryLimit(req: Request, res: Response, next: NextFunction) {
   const now = Date.now();
-  const key = req.ip || 'unknown';
-  let entry = requestsByIp.get(key);
-  if (!entry || now >= entry.resetAt) {
-    entry = { count: 0, resetAt: now + intervalMs };
-    requestsByIp.set(key, entry);
+  const ip = req.ip || 'unknown';
+  const item = attempts.get(ip);
+  const current = !item || item.resetAt < now ? {count: 0, resetAt: now + 15 * 60_000} : item;
+  if (current.count >= 5) {
+    res.setHeader('Retry-After', String(Math.ceil((current.resetAt - now) / 1000)));
+    res.status(429).json({ message: 'Too many inquiries. Please try again later.' }); return;
   }
-  entry.count += 1;
-  if (entry.count > allowedAttempts) {
-    res.setHeader('Retry-After', String(Math.ceil((entry.resetAt - now) / 1000)));
-    res.status(429).json({ message: 'Too many inquiries. Please try again later.' });
-    return;
-  }
-  next();
+  current.count++; attempts.set(ip, current); next();
 }
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of requestsByIp) if (now > value.resetAt) requestsByIp.delete(key);
-}, intervalMs).unref();
+const inquiryCleanup = setInterval(() => {
+  for (const [ip, value] of attempts) if (value.resetAt < Date.now()) attempts.delete(ip);
+}, 15 * 60_000);
+inquiryCleanup.unref();
 
-app.post('/api/inquiries', rateLimit, async (req: Request, res: Response) => {
-  res.setHeader('Cache-Control', 'no-store');
-  // A browser-site-only endpoint: reject cross-site submission and non-JSON posts.
+app.post('/api/inquiries', inquiryLimit, async (req: Request, res: Response) => {
   const origin = req.get('Origin');
-  const expectedOrigin = process.env.PUBLIC_ORIGIN?.replace(/\/$/, '');
-  if (expectedOrigin && origin && origin !== expectedOrigin) {
-    res.status(403).json({ message: 'Origin not allowed.' });
-    return;
+  const expected = process.env.PUBLIC_ORIGIN?.trim().replace(/\/$/, '') || `https://${req.get('host')}`;
+  if ((origin && origin !== expected) || req.get('sec-fetch-site') === 'cross-site') {
+    res.status(403).json({ message: 'Origin not allowed.' }); return;
   }
   if (!req.is('application/json')) {
-    res.status(415).json({ message: 'Please submit the form as JSON.' });
-    return;
+    res.status(415).json({ message: 'Please submit the form as JSON.' }); return;
   }
-  // Hidden honeypot input: bots get an inconspicuous OK without sending email.
   if (req.body && typeof req.body.website === 'string' && req.body.website.trim()) {
-    res.status(200).json({ message: 'Your message was sent successfully.' });
-    return;
+    res.json({ message: 'Your message was sent successfully.' }); return;
   }
   const inquiry = validateInquiry(req.body);
   if (!inquiry) {
-    res.status(400).json({ message: 'Please enter a valid name, email, project type, and project details (20–5000 characters).' });
-    return;
+    res.status(400).json({ message: 'Please enter a valid name, email, project type, and project details (20–5000 characters).' }); return;
   }
   const smtpUser = process.env.SMTP_USER?.trim();
   const smtpPassword = process.env.SMTP_APP_PASSWORD?.replace(/\s/g, '');
   if (!smtpUser || !smtpPassword) {
-    res.status(503).json({ message: 'Email service is not configured yet. Please try again later.' });
-    return;
+    res.status(503).json({ message: 'Email service is not configured. Please contact us directly.' }); return;
   }
   try {
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      host: 'smtp.gmail.com', port: 465, secure: true,
       auth: { user: smtpUser, pass: smtpPassword },
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 20_000,
-      disableFileAccess: true,
-      disableUrlAccess: true,
+      connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 20_000,
+      disableFileAccess: true, disableUrlAccess: true,
     });
     await transporter.sendMail({
       from: { name: 'JuaraMetaCorp Website', address: smtpUser },
@@ -94,32 +76,40 @@ app.post('/api/inquiries', rateLimit, async (req: Request, res: Response) => {
       replyTo: { name: inquiry.name, address: inquiry.email },
       subject: `New Project Inquiry – ${inquiry.projectType}`,
       text: [
-        `Name: ${inquiry.name}`,
-        `Email: ${inquiry.email}`,
-        `Project Type: ${inquiry.projectType}`,
-        'Project Details:',
-        inquiry.details,
+        `Name: ${inquiry.name}`, `Email: ${inquiry.email}`,
+        `Project Type: ${inquiry.projectType}`, 'Project Details:', inquiry.details,
       ].join('\n'),
     });
     res.status(200).json({ message: 'Your project inquiry has been sent successfully. We will be in touch soon.' });
   } catch (error) {
-    // Log only the SMTP error class/code; never log secrets or inquiry PII.
     const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : 'UNKNOWN';
-    console.error('Inquiry mail delivery failed:', code);
+    console.error('Inquiry delivery failed:', code);
     res.status(502).json({ message: 'We could not send your message. Please try again later or email us directly.' });
   }
 });
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
-app.use('/api', (_req, res) => res.status(404).json({ message: 'Not found.' }));
-
-app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (error instanceof SyntaxError || (typeof error === 'object' && error !== null && 'type' in error)) {
-    res.status(400).json({ message: 'Invalid or oversized request body.' });
-    return;
+app.get('/api/health', async (_req, res) => {
+  try {
+    if (useSupabase) { validateSupabaseConfig(); await getSections(); }
+    if (!process.env.CMS_ADMIN_PASSWORD_HASH) throw new Error('CMS_ADMIN_PASSWORD_HASH missing.');
+    res.json({ status: 'ok', storage: useSupabase ? 'supabase' : 'local' });
+  } catch (error) {
+    console.error('API readiness failed:', error instanceof Error ? error.message : 'Unknown error');
+    res.status(503).json({ status: 'error', message: 'CMS storage unavailable. Check server environment and Supabase schema.' });
   }
-  console.error('Unexpected server error');
-  res.status(500).json({ message: 'An unexpected error occurred.' });
 });
 
+// API never falls through into Vite or a browser HTML error page.
+app.use('/api', (_req, res) => res.status(404).json({ message: 'API route not found.' }));
+const apiErrorHandler: ErrorRequestHandler = (error: unknown, req: Request, res: Response, _next: NextFunction) => {
+  if (res.headersSent) return _next(error);
+  const e = error as { type?: string; status?: number; message?: string } | null;
+  const isBodyError = !!e && (
+    e.type === 'entity.parse.failed' || e.type === 'entity.too.large' || e.type === 'encoding.unsupported'
+  );
+  const status = isBodyError ? (e?.type === 'entity.too.large' ? 413 : 400) : 500;
+  if (status === 500) console.error('API unhandled error:', req.method, req.path, error instanceof Error ? error.message : 'unknown');
+  res.status(status).json({ message: status === 413 ? 'Request body too large.' : status === 400 ? 'Invalid JSON request body.' : 'An unexpected server error occurred.' });
+};
+app.use(apiErrorHandler);
 export default app;
